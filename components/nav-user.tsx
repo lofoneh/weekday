@@ -1,9 +1,9 @@
 import {
   RiExpandUpDownLine,
-  RiUserLine,
   RiGroupLine,
-  RiSparklingLine,
   RiLogoutCircleLine,
+  RiSparklingLine,
+  RiUserLine,
 } from "@remixicon/react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,9 +24,9 @@ export function NavUser({
   user,
 }: {
   user: {
-    name: string;
-    email: string;
     avatar: string;
+    email: string;
+    name: string;
   };
 }) {
   return (
@@ -39,7 +39,7 @@ export function NavUser({
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground [&>svg]:size-5"
             >
               <Avatar className="size-8">
-                <AvatarImage src={user.avatar} alt={user.name} />
+                <AvatarImage alt={user.name} src={user.avatar} />
                 <AvatarFallback className="rounded-lg">S</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
@@ -50,8 +50,8 @@ export function NavUser({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             className="w-(--radix-dropdown-menu-trigger-width) dark bg-sidebar"
-            side="bottom"
             align="end"
+            side="bottom"
             sideOffset={4}
           >
             <DropdownMenuGroup>

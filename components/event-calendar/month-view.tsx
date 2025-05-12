@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+
 import {
   addDays,
   eachDayOfInterval,
@@ -15,11 +16,7 @@ import {
 } from "date-fns";
 
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
+  type CalendarEvent,
   DraggableEvent,
   DroppableCell,
   EventGap,
@@ -30,22 +27,26 @@ import {
   getSpanningEventsForDay,
   sortEvents,
   useEventVisibility,
-  type CalendarEvent,
 } from "@/components/event-calendar";
 import { DefaultStartHour } from "@/components/event-calendar/constants";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface MonthViewProps {
   currentDate: Date;
   events: CalendarEvent[];
-  onEventSelect: (event: CalendarEvent) => void;
   onEventCreate: (startTime: Date) => void;
+  onEventSelect: (event: CalendarEvent) => void;
 }
 
 export function MonthView({
   currentDate,
   events,
-  onEventSelect,
   onEventCreate,
+  onEventSelect,
 }: MonthViewProps) {
   const days = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
@@ -53,7 +54,7 @@ export function MonthView({
     const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
     const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
 
-    return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+    return eachDayOfInterval({ end: calendarEnd, start: calendarStart });
   }, [currentDate]);
 
   const weekdays = useMemo(() => {
@@ -85,8 +86,8 @@ export function MonthView({
 
   const [isMounted, setIsMounted] = useState(false);
   const { contentRef, getVisibleEventCount } = useEventVisibility({
-    eventHeight: EventHeight,
     eventGap: EventGap,
+    eventHeight: EventHeight,
   });
 
   useEffect(() => {
@@ -94,7 +95,7 @@ export function MonthView({
   }, []);
 
   return (
-    <div data-slot="month-view" className="contents">
+    <div className="contents" data-slot="month-view">
       <div className="border-border/70 grid grid-cols-7 border-y uppercase">
         {weekdays.map((day) => (
           <div
@@ -136,17 +137,17 @@ export function MonthView({
                 <div
                   key={day.toString()}
                   className="group border-border/70 data-outside-cell:bg-muted/25 data-outside-cell:text-muted-foreground/70 border-r border-b last:border-r-0"
-                  data-today={isToday(day) || undefined}
                   data-outside-cell={!isCurrentMonth || undefined}
+                  data-today={isToday(day) || undefined}
                 >
                   <DroppableCell
                     id={cellId}
-                    date={day}
                     onClick={() => {
                       const startTime = new Date(day);
                       startTime.setHours(DefaultStartHour, 0, 0);
                       onEventCreate(startTime);
                     }}
+                    date={day}
                   >
                     <div className="group-data-today:bg-primary group-data-today:text-primary-foreground mt-1 inline-flex size-6 items-center justify-center rounded-full text-sm">
                       {format(day, "d")}
@@ -176,9 +177,9 @@ export function MonthView({
                               <EventItem
                                 onClick={(e) => handleEventClick(event, e)}
                                 event={event}
-                                view="month"
                                 isFirstDay={isFirstDay}
                                 isLastDay={isLastDay}
+                                view="month"
                               >
                                 <div className="invisible" aria-hidden={true}>
                                   {!event.allDay && (
@@ -203,11 +204,11 @@ export function MonthView({
                             aria-hidden={isHidden ? "true" : undefined}
                           >
                             <DraggableEvent
-                              event={event}
-                              view="month"
                               onClick={(e) => handleEventClick(event, e)}
+                              event={event}
                               isFirstDay={isFirstDay}
                               isLastDay={isLastDay}
+                              view="month"
                             />
                           </div>
                         );
@@ -227,13 +228,13 @@ export function MonthView({
                             </button>
                           </PopoverTrigger>
                           <PopoverContent
-                            align="center"
                             className="max-w-52 p-3"
                             style={
                               {
                                 "--event-height": `${EventHeight}px`,
                               } as React.CSSProperties
                             }
+                            align="center"
                           >
                             <div className="space-y-2">
                               <div className="text-sm font-medium">
@@ -253,9 +254,9 @@ export function MonthView({
                                         handleEventClick(event, e)
                                       }
                                       event={event}
-                                      view="month"
                                       isFirstDay={isFirstDay}
                                       isLastDay={isLastDay}
+                                      view="month"
                                     />
                                   );
                                 })}

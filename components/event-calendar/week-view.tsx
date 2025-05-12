@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
+
 import {
   addHours,
   areIntervalsOverlapping,
@@ -19,43 +20,43 @@ import {
 } from "date-fns";
 
 import {
+  type CalendarEvent,
   DraggableEvent,
   DroppableCell,
   EventItem,
   isMultiDayEvent,
   useCurrentTimeIndicator,
   WeekCellsHeight,
-  type CalendarEvent,
 } from "@/components/event-calendar";
-import { StartHour, EndHour } from "@/components/event-calendar/constants";
+import { EndHour, StartHour } from "@/components/event-calendar/constants";
 import { cn } from "@/lib/utils";
+
+interface PositionedEvent {
+  event: CalendarEvent;
+  height: number;
+  left: number;
+  top: number;
+  width: number;
+  zIndex: number;
+}
 
 interface WeekViewProps {
   currentDate: Date;
   events: CalendarEvent[];
-  onEventSelect: (event: CalendarEvent) => void;
   onEventCreate: (startTime: Date) => void;
-}
-
-interface PositionedEvent {
-  event: CalendarEvent;
-  top: number;
-  height: number;
-  left: number;
-  width: number;
-  zIndex: number;
+  onEventSelect: (event: CalendarEvent) => void;
 }
 
 export function WeekView({
   currentDate,
   events,
-  onEventSelect,
   onEventCreate,
+  onEventSelect,
 }: WeekViewProps) {
   const days = useMemo(() => {
     const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
     const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 });
-    return eachDayOfInterval({ start: weekStart, end: weekEnd });
+    return eachDayOfInterval({ end: weekEnd, start: weekStart });
   }, [currentDate]);
 
   const weekStart = useMemo(
@@ -66,8 +67,8 @@ export function WeekView({
   const hours = useMemo(() => {
     const dayStart = startOfDay(currentDate);
     return eachHourOfInterval({
-      start: addHours(dayStart, StartHour),
       end: addHours(dayStart, EndHour - 1),
+      start: addHours(dayStart, StartHour),
     });
   }, [currentDate]);
 
@@ -131,7 +132,7 @@ export function WeekView({
       const dayStart = startOfDay(day);
 
       // Track columns for overlapping events
-      const columns: { event: CalendarEvent; end: Date }[][] = [];
+      const columns: { end: Date; event: CalendarEvent; }[][] = [];
 
       sortedEvents.forEach((event) => {
         const eventStart = new Date(event.start);
@@ -166,10 +167,10 @@ export function WeekView({
           } else {
             const overlaps = col.some((c) =>
               areIntervalsOverlapping(
-                { start: adjustedStart, end: adjustedEnd },
+                { end: adjustedEnd, start: adjustedStart },
                 {
-                  start: new Date(c.event.start),
                   end: new Date(c.event.end),
+                  start: new Date(c.event.start),
                 },
               ),
             );
@@ -184,7 +185,7 @@ export function WeekView({
         // Ensure column is initialized before pushing
         const currentColumn = columns[columnIndex] || [];
         columns[columnIndex] = currentColumn;
-        currentColumn.push({ event, end: adjustedEnd });
+        currentColumn.push({ end: adjustedEnd, event });
 
         // Calculate width and left position based on number of columns
         const width = columnIndex === 0 ? 1 : 0.9;
@@ -192,9 +193,9 @@ export function WeekView({
 
         positionedEvents.push({
           event,
-          top,
           height,
           left,
+          top,
           width,
           zIndex: 10 + columnIndex, // Higher columns get higher z-index
         });
@@ -218,7 +219,7 @@ export function WeekView({
   );
 
   return (
-    <div data-slot="week-view" className="flex h-full flex-col">
+    <div className="flex h-full flex-col" data-slot="week-view">
       <div className="bg-background/80 border-border/70 sticky top-0 z-30 grid grid-cols-8 border-y backdrop-blur-md uppercase">
         <div className="text-muted-foreground/70 py-2 text-center text-xs">
           <span className="max-[479px]:sr-only">{format(new Date(), "O")}</span>
@@ -278,9 +279,9 @@ export function WeekView({
                         key={`spanning-${event.id}`}
                         onClick={(e) => handleEventClick(event, e)}
                         event={event}
-                        view="month"
                         isFirstDay={isFirstDay}
                         isLastDay={isLastDay}
+                        view="month"
                       >
                         {/* Show title if it's the first day of the event or the first visible day in the week */}
                         <div
@@ -330,9 +331,9 @@ export function WeekView({
                 key={positionedEvent.event.id}
                 className="absolute z-10 px-0.5"
                 style={{
-                  top: `${positionedEvent.top}px`,
                   height: `${positionedEvent.height}px`,
                   left: `${positionedEvent.left * 100}%`,
+                  top: `${positionedEvent.top}px`,
                   width: `${positionedEvent.width * 100}%`,
                   zIndex: positionedEvent.zIndex,
                 }}
@@ -340,11 +341,11 @@ export function WeekView({
               >
                 <div className="h-full w-full">
                   <DraggableEvent
-                    event={positionedEvent.event}
-                    view="week"
                     onClick={(e) => handleEventClick(positionedEvent.event, e)}
-                    showTime
+                    event={positionedEvent.event}
                     height={positionedEvent.height}
+                    view="week"
+                    showTime
                   />
                 </div>
               </div>
@@ -374,10 +375,8 @@ export function WeekView({
                     const quarterHourTime = hourValue + quarter * 0.25;
                     return (
                       <DroppableCell
-                        key={`${hour.toString()}-${quarter}`}
                         id={`week-cell-${day.toISOString()}-${quarterHourTime}`}
-                        date={day}
-                        time={quarterHourTime}
+                        key={`${hour.toString()}-${quarter}`}
                         className={cn(
                           "absolute h-[calc(var(--week-cells-height)/4)] w-full",
                           quarter === 0 && "top-0",
@@ -394,6 +393,8 @@ export function WeekView({
                           startTime.setMinutes(quarter * 15);
                           onEventCreate(startTime);
                         }}
+                        date={day}
+                        time={quarterHourTime}
                       />
                     );
                   })}

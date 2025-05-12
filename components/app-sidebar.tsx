@@ -1,34 +1,35 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { RiCheckLine } from "@remixicon/react";
-import { useCalendarContext } from "@/components/event-calendar/calendar-context";
-import { etiquettes } from "@/components/big-calendar";
 
+import { RiCheckLine } from "@remixicon/react";
+import Link from "next/link";
+
+import { etiquettes } from "@/components/big-calendar";
+import { useCalendarContext } from "@/components/event-calendar/calendar-context";
 import { NavUser } from "@/components/nav-user";
+import SidebarCalendar from "@/components/sidebar-calendar";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarGroupContent,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import SidebarCalendar from "@/components/sidebar-calendar";
-import { Checkbox } from "@/components/ui/checkbox";
 
 const data = {
   user: {
-    name: "Sofia Safier",
-    email: "sofia@safier.com",
     avatar:
       "https://res.cloudinary.com/dlzlfasou/image/upload/v1743935337/user-01_l4if9t.png",
+    email: "sofia@safier.com",
+    name: "Sofia Safier",
   },
 };
 
@@ -45,18 +46,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <Link className="inline-flex" href="/">
             <span className="sr-only">Logo</span>
             <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="32"
               height="32"
               viewBox="0 0 32 32"
+              width="32"
+              xmlns="http://www.w3.org/2000/svg"
             >
               <path
-                fill="#52525C"
                 d="m10.661.863-2.339 1.04 5.251 11.794L1.521 9.072l-.918 2.39 12.053 4.627-11.794 5.25 1.041 2.34 11.794-5.252L9.071 30.48l2.39.917 4.626-12.052 5.251 11.793 2.339-1.04-5.251-11.795 12.052 4.627.917-2.39-12.052-4.627 11.794-5.25-1.041-2.34-11.794 5.252L22.928 1.52l-2.39-.917-4.626 12.052L10.662.863Z"
+                fill="#52525C"
               />
               <path
-                fill="#F4F4F5"
                 d="M17.28 0h-2.56v12.91L5.591 3.78l-1.81 1.81 9.129 9.129H0v2.56h12.91L3.78 26.409l1.81 1.81 9.129-9.129V32h2.56V19.09l9.128 9.129 1.81-1.81-9.128-9.129H32v-2.56H19.09l9.129-9.129-1.81-1.81-9.129 9.129V0Z"
+                fill="#F4F4F5"
               />
             </svg>
           </Link>
@@ -90,13 +91,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           }
                         />
                         <RiCheckLine
-                          className="peer-not-data-[state=checked]:invisible"
                           size={16}
+                          className="peer-not-data-[state=checked]:invisible"
                           aria-hidden="true"
                         />
                         <label
-                          htmlFor={item.id}
                           className="peer-not-data-[state=checked]:line-through peer-not-data-[state=checked]:text-muted-foreground/65 after:absolute after:inset-0"
+                          htmlFor={item.id}
                         >
                           {item.name}
                         </label>

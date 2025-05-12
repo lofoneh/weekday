@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+
 import { RiCalendarEventLine } from "@remixicon/react";
 import { addDays, format, isToday } from "date-fns";
 
@@ -75,9 +76,9 @@ export function AgendaView({
                 {dayEvents.map((event) => (
                   <EventItem
                     key={event.id}
+                    onClick={(e) => handleEventClick(event, e)}
                     event={event}
                     view="agenda"
-                    onClick={(e) => handleEventClick(event, e)}
                   />
                 ))}
               </div>

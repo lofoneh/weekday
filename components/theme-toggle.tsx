@@ -1,12 +1,13 @@
 "use client";
 
+import { useId, useState } from "react";
+
 import { RiMoonClearLine, RiSunLine } from "@remixicon/react";
 import { useTheme } from "next-themes";
-import { useId, useState } from "react";
 
 export default function ThemeToggle() {
   const id = useId();
-  const { theme, setTheme } = useTheme();
+  const { setTheme, theme } = useTheme();
   const [system, setSystem] = useState(false);
 
   const smartToggle = () => {
@@ -31,23 +32,23 @@ export default function ThemeToggle() {
   return (
     <div className="flex flex-col justify-center">
       <input
-        type="checkbox"
-        name="theme-toggle"
         id={id}
+        name="theme-toggle"
         className="peer sr-only"
         checked={system}
         onChange={smartToggle}
         aria-label="Toggle dark mode"
+        type="checkbox"
       />
       <label
         className="text-muted-foreground/80 hover:text-foreground/80 rounded peer-focus-visible:border-ring peer-focus-visible:ring-ring/50 relative inline-flex size-8 cursor-pointer items-center justify-center transition-[color,box-shadow] outline-none peer-focus-visible:ring-[3px]"
-        htmlFor={id}
         aria-hidden="true"
+        htmlFor={id}
       >
-        <RiSunLine className="dark:hidden" size={20} aria-hidden="true" />
+        <RiSunLine size={20} className="dark:hidden" aria-hidden="true" />
         <RiMoonClearLine
-          className="hidden dark:block"
           size={20}
+          className="hidden dark:block"
           aria-hidden="true"
         />
         <span className="sr-only">Switch to system/light/dark version</span>

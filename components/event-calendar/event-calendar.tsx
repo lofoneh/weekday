@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useCalendarContext } from "./calendar-context";
+
 import {
   addDays,
   addMonths,
@@ -35,7 +35,8 @@ import {
   WeekCellsHeight,
   WeekView,
 } from "@/components/event-calendar";
-import { cn } from "@/lib/utils";
+import Participants from "@/components/participants";
+import ThemeToggle from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -45,25 +46,26 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
-import ThemeToggle from "@/components/theme-toggle";
-import Participants from "@/components/participants";
+import { cn } from "@/lib/utils";
+
+import { useCalendarContext } from "./calendar-context";
 
 export interface EventCalendarProps {
-  events?: CalendarEvent[];
-  onEventAdd?: (event: CalendarEvent) => void;
-  onEventUpdate?: (event: CalendarEvent) => void;
-  onEventDelete?: (eventId: string) => void;
   className?: string;
+  events?: CalendarEvent[];
   initialView?: CalendarView;
+  onEventAdd?: (event: CalendarEvent) => void;
+  onEventDelete?: (eventId: string) => void;
+  onEventUpdate?: (event: CalendarEvent) => void;
 }
 
 export function EventCalendar({
-  events = [],
-  onEventAdd,
-  onEventUpdate,
-  onEventDelete,
   className,
+  events = [],
   initialView = "month",
+  onEventAdd,
+  onEventDelete,
+  onEventUpdate,
 }: EventCalendarProps) {
   // Use the shared calendar context instead of local state
   const { currentDate, setCurrentDate } = useCalendarContext();
@@ -89,17 +91,17 @@ export function EventCalendar({
       }
 
       switch (e.key.toLowerCase()) {
+        case "a":
+          setView("agenda");
+          break;
+        case "d":
+          setView("day");
+          break;
         case "m":
           setView("month");
           break;
         case "w":
           setView("week");
-          break;
-        case "d":
-          setView("day");
-          break;
-        case "a":
-          setView("agenda");
           break;
       }
     };
@@ -167,10 +169,10 @@ export function EventCalendar({
 
     const newEvent: CalendarEvent = {
       id: "",
-      title: "",
-      start: startTime,
-      end: addHoursToDate(startTime, 1),
       allDay: false,
+      end: addHoursToDate(startTime, 1),
+      start: startTime,
+      title: "",
     };
     setSelectedEvent(newEvent);
     setIsEventDialogOpen(true);
@@ -269,8 +271,8 @@ export function EventCalendar({
       className="flex has-data-[slot=month-view]:flex-1 flex-col rounded-lg"
       style={
         {
-          "--event-height": `${EventHeight}px`,
           "--event-gap": `${EventGap}px`,
+          "--event-height": `${EventHeight}px`,
           "--week-cells-height": `${WeekCellsHeight}px`,
         } as React.CSSProperties
       }
@@ -285,8 +287,8 @@ export function EventCalendar({
           <div className="flex sm:flex-col max-sm:items-center justify-between gap-1.5">
             <div className="flex items-center gap-1.5">
               <SidebarTrigger
-                data-state={open ? "invisible" : "visible"}
                 className="peer size-7 text-muted-foreground/80 hover:text-foreground/80 hover:bg-transparent! sm:-ms-1.5 lg:data-[state=invisible]:opacity-0 lg:data-[state=invisible]:pointer-events-none transition-opacity ease-in-out duration-200"
+                data-state={open ? "invisible" : "visible"}
                 isOutsideSidebar
               />
               <h2 className="font-semibold text-xl lg:peer-data-[state=invisible]:-translate-x-7.5 transition-transform ease-in-out duration-300">
@@ -299,8 +301,8 @@ export function EventCalendar({
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center sm:gap-2 max-sm:order-1">
                 <Button
-                  variant="ghost"
                   size="icon"
+                  variant="ghost"
                   className="max-sm:size-8"
                   onClick={handlePrevious}
                   aria-label="Previous"
@@ -308,8 +310,8 @@ export function EventCalendar({
                   <ChevronLeftIcon size={16} aria-hidden="true" />
                 </Button>
                 <Button
-                  variant="ghost"
                   size="icon"
+                  variant="ghost"
                   className="max-sm:size-8"
                   onClick={handleNext}
                   aria-label="Next"
@@ -343,13 +345,13 @@ export function EventCalendar({
                   >
                     <span className="capitalize">{view}</span>
                     <ChevronDownIcon
-                      className="-me-1 opacity-60"
                       size={16}
+                      className="-me-1 opacity-60"
                       aria-hidden="true"
                     />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="min-w-32">
+                <DropdownMenuContent className="min-w-32" align="end">
                   <DropdownMenuItem onClick={() => setView("month")}>
                     Month <DropdownMenuShortcut>M</DropdownMenuShortcut>
                   </DropdownMenuItem>
@@ -372,46 +374,46 @@ export function EventCalendar({
         <div className="flex flex-1 flex-col">
           {view === "month" && (
             <MonthView
+              onEventCreate={handleEventCreate}
+              onEventSelect={handleEventSelect}
               currentDate={currentDate}
               events={events}
-              onEventSelect={handleEventSelect}
-              onEventCreate={handleEventCreate}
             />
           )}
           {view === "week" && (
             <WeekView
+              onEventCreate={handleEventCreate}
+              onEventSelect={handleEventSelect}
               currentDate={currentDate}
               events={events}
-              onEventSelect={handleEventSelect}
-              onEventCreate={handleEventCreate}
             />
           )}
           {view === "day" && (
             <DayView
+              onEventCreate={handleEventCreate}
+              onEventSelect={handleEventSelect}
               currentDate={currentDate}
               events={events}
-              onEventSelect={handleEventSelect}
-              onEventCreate={handleEventCreate}
             />
           )}
           {view === "agenda" && (
             <AgendaView
+              onEventSelect={handleEventSelect}
               currentDate={currentDate}
               events={events}
-              onEventSelect={handleEventSelect}
             />
           )}
         </div>
 
         <EventDialog
-          event={selectedEvent}
-          isOpen={isEventDialogOpen}
           onClose={() => {
             setIsEventDialogOpen(false);
             setSelectedEvent(null);
           }}
-          onSave={handleEventSave}
           onDelete={handleEventDelete}
+          onSave={handleEventSave}
+          event={selectedEvent}
+          isOpen={isEventDialogOpen}
         />
       </CalendarDndProvider>
     </div>

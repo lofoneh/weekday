@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useMemo } from "react";
+import type React from "react";
+import { useMemo } from "react";
+
 import {
   addHours,
   areIntervalsOverlapping,
@@ -14,29 +16,29 @@ import {
 } from "date-fns";
 
 import {
+  type CalendarEvent,
   DraggableEvent,
   DroppableCell,
   EventItem,
   isMultiDayEvent,
   useCurrentTimeIndicator,
   WeekCellsHeight,
-  type CalendarEvent,
 } from "@/components/event-calendar";
-import { StartHour, EndHour } from "@/components/event-calendar/constants";
+import { EndHour, StartHour } from "@/components/event-calendar/constants";
 import { cn } from "@/lib/utils";
 
 interface DayViewProps {
   currentDate: Date;
   events: CalendarEvent[];
-  onEventSelect: (event: CalendarEvent) => void;
   onEventCreate: (startTime: Date) => void;
+  onEventSelect: (event: CalendarEvent) => void;
 }
 
 interface PositionedEvent {
   event: CalendarEvent;
-  top: number;
   height: number;
   left: number;
+  top: number;
   width: number;
   zIndex: number;
 }
@@ -44,14 +46,14 @@ interface PositionedEvent {
 export function DayView({
   currentDate,
   events,
-  onEventSelect,
   onEventCreate,
+  onEventSelect,
 }: DayViewProps) {
   const hours = useMemo(() => {
     const dayStart = startOfDay(currentDate);
     return eachHourOfInterval({
-      start: addHours(dayStart, StartHour),
       end: addHours(dayStart, EndHour - 1),
+      start: addHours(dayStart, StartHour),
     });
   }, [currentDate]);
 
@@ -110,7 +112,7 @@ export function DayView({
     });
 
     // Track columns for overlapping events
-    const columns: { event: CalendarEvent; end: Date }[][] = [];
+    const columns: { end: Date; event: CalendarEvent; }[][] = [];
 
     sortedEvents.forEach((event) => {
       const eventStart = new Date(event.start);
@@ -143,8 +145,8 @@ export function DayView({
         } else {
           const overlaps = col.some((c) =>
             areIntervalsOverlapping(
-              { start: adjustedStart, end: adjustedEnd },
-              { start: new Date(c.event.start), end: new Date(c.event.end) },
+              { end: adjustedEnd, start: adjustedStart },
+              { end: new Date(c.event.end), start: new Date(c.event.start) },
             ),
           );
           if (!overlaps) {
@@ -158,7 +160,7 @@ export function DayView({
       // Ensure column is initialized before pushing
       const currentColumn = columns[columnIndex] || [];
       columns[columnIndex] = currentColumn;
-      currentColumn.push({ event, end: adjustedEnd });
+      currentColumn.push({ end: adjustedEnd, event });
 
       // First column takes full width, others are indented by 10% and take 90% width
       const width = columnIndex === 0 ? 1 : 0.9;
@@ -166,9 +168,9 @@ export function DayView({
 
       result.push({
         event,
-        top,
         height,
         left,
+        top,
         width,
         zIndex: 10 + columnIndex, // Higher columns get higher z-index
       });
@@ -189,7 +191,7 @@ export function DayView({
   );
 
   return (
-    <div data-slot="day-view" className="contents">
+    <div className="contents" data-slot="day-view">
       {showAllDaySection && (
         <div className="border-border/70 bg-muted/50 border-t">
           <div className="grid grid-cols-[3rem_1fr] sm:grid-cols-[4rem_1fr]">
@@ -210,9 +212,9 @@ export function DayView({
                     key={`spanning-${event.id}`}
                     onClick={(e) => handleEventClick(event, e)}
                     event={event}
-                    view="month"
                     isFirstDay={isFirstDay}
                     isLastDay={isLastDay}
+                    view="month"
                   >
                     {/* Always show the title in day view for better usability */}
                     <div>{event.title}</div>
@@ -224,7 +226,7 @@ export function DayView({
         </div>
       )}
 
-      <div className="border-border/70 grid flex-1 grid-cols-[3rem_1fr] border-t sm:grid-cols-[4rem_1fr] overflow-hidden">
+      <div className="border-border/70 grid flex-1 grid-cols-[3rem_1fr] overflow-hidden border-t sm:grid-cols-[4rem_1fr]">
         <div>
           {hours.map((hour, index) => (
             <div
@@ -247,20 +249,20 @@ export function DayView({
               key={positionedEvent.event.id}
               className="absolute z-10 px-0.5"
               style={{
-                top: `${positionedEvent.top}px`,
                 height: `${positionedEvent.height}px`,
                 left: `${positionedEvent.left * 100}%`,
+                top: `${positionedEvent.top}px`,
                 width: `${positionedEvent.width * 100}%`,
                 zIndex: positionedEvent.zIndex,
               }}
             >
               <div className="h-full w-full">
                 <DraggableEvent
-                  event={positionedEvent.event}
-                  view="day"
                   onClick={(e) => handleEventClick(positionedEvent.event, e)}
-                  showTime
+                  event={positionedEvent.event}
                   height={positionedEvent.height}
+                  view="day"
+                  showTime
                 />
               </div>
             </div>
@@ -273,8 +275,8 @@ export function DayView({
               style={{ top: `${currentTimePosition}%` }}
             >
               <div className="relative flex items-center">
-                <div className="bg-red-500 absolute -left-1 h-2 w-2 rounded-full"></div>
-                <div className="bg-red-500 h-[2px] w-full"></div>
+                <div className="absolute -left-1 h-2 w-2 rounded-full bg-red-500"></div>
+                <div className="h-[2px] w-full bg-red-500"></div>
               </div>
             </div>
           )}
@@ -292,10 +294,8 @@ export function DayView({
                   const quarterHourTime = hourValue + quarter * 0.25;
                   return (
                     <DroppableCell
-                      key={`${hour.toString()}-${quarter}`}
                       id={`day-cell-${currentDate.toISOString()}-${quarterHourTime}`}
-                      date={currentDate}
-                      time={quarterHourTime}
+                      key={`${hour.toString()}-${quarter}`}
                       className={cn(
                         "absolute h-[calc(var(--week-cells-height)/4)] w-full",
                         quarter === 0 && "top-0",
@@ -312,6 +312,8 @@ export function DayView({
                         startTime.setMinutes(quarter * 15);
                         onEventCreate(startTime);
                       }}
+                      date={currentDate}
+                      time={quarterHourTime}
                     />
                   );
                 })}

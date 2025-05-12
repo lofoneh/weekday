@@ -2,29 +2,29 @@
 
 import { useDroppable } from "@dnd-kit/core";
 
-import { cn } from "@/lib/utils";
 import { useCalendarDnd } from "@/components/event-calendar";
+import { cn } from "@/lib/utils";
 
 interface DroppableCellProps {
   id: string;
   date: Date;
-  time?: number; // For week/day views, represents hours (e.g., 9.25 for 9:15)
   children?: React.ReactNode;
   className?: string;
+  time?: number; // For week/day views, represents hours (e.g., 9.25 for 9:15)
   onClick?: () => void;
 }
 
 export function DroppableCell({
   id,
-  date,
-  time,
   children,
   className,
+  date,
+  time,
   onClick,
 }: DroppableCellProps) {
   const { activeEvent } = useCalendarDnd();
 
-  const { setNodeRef, isOver } = useDroppable({
+  const { isOver, setNodeRef } = useDroppable({
     id,
     data: {
       date,
@@ -43,11 +43,11 @@ export function DroppableCell({
   return (
     <div
       ref={setNodeRef}
-      onClick={onClick}
       className={cn(
         "data-dragging:bg-accent flex h-full flex-col px-0.5 py-1 sm:px-1",
         className,
       )}
+      onClick={onClick}
       title={formattedTime ? `${formattedTime}` : undefined}
       data-dragging={isOver && activeEvent ? true : undefined}
     >

@@ -3,13 +3,13 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 
 interface EventVisibilityOptions {
-  eventHeight: number;
   eventGap: number;
+  eventHeight: number;
 }
 
 interface EventVisibilityResult {
-  contentRef: React.RefObject<HTMLDivElement>;
   contentHeight: number | null;
+  contentRef: React.RefObject<HTMLDivElement>;
   getVisibleEventCount: (totalEvents: number) => number;
 }
 
@@ -18,8 +18,8 @@ interface EventVisibilityResult {
  * Uses ResizeObserver for efficient updates
  */
 export function useEventVisibility({
-  eventHeight,
   eventGap,
+  eventHeight,
 }: EventVisibilityOptions): EventVisibilityResult {
   // Use the standard pattern for React refs
   const contentRef = useRef<HTMLDivElement>(null);
@@ -79,8 +79,8 @@ export function useEventVisibility({
 
   // Use type assertion to satisfy TypeScript
   return {
-    contentRef,
     contentHeight,
+    contentRef,
     getVisibleEventCount,
   } as EventVisibilityResult;
 }

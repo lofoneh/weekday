@@ -1,6 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, ReactNode, useContext, useState } from "react";
+
 import { etiquettes } from "@/components/big-calendar";
 
 interface CalendarContextType {
@@ -10,8 +11,8 @@ interface CalendarContextType {
 
   // Etiquette visibility management
   visibleColors: string[];
-  toggleColorVisibility: (color: string) => void;
   isColorVisible: (color: string | undefined) => boolean;
+  toggleColorVisibility: (color: string) => void;
 }
 
 const CalendarContext = createContext<CalendarContextType | undefined>(
@@ -62,10 +63,10 @@ export function CalendarProvider({ children }: CalendarProviderProps) {
 
   const value = {
     currentDate,
-    setCurrentDate,
-    visibleColors,
-    toggleColorVisibility,
     isColorVisible,
+    setCurrentDate,
+    toggleColorVisibility,
+    visibleColors,
   };
 
   return (

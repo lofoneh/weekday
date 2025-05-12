@@ -1,14 +1,16 @@
 "use client";
 
 import { useMemo } from "react";
+
 import type { DraggableAttributes } from "@dnd-kit/core";
 import type { SyntheticListenerMap } from "@dnd-kit/core/dist/hooks/utilities";
+
 import { differenceInMinutes, format, getMinutes, isPast } from "date-fns";
 
 import {
+  type CalendarEvent,
   getBorderRadiusClasses,
   getEventColorClasses,
-  type CalendarEvent,
 } from "@/components/event-calendar";
 import { cn } from "@/lib/utils";
 
@@ -20,33 +22,35 @@ const formatTimeWithOptionalMinutes = (date: Date) => {
   return format(date, getMinutes(date) === 0 ? "ha" : "h:mma").toLowerCase();
 };
 
-interface EventWrapperProps {
+interface EventItemProps {
   event: CalendarEvent;
+  view: "agenda" | "day" | "month" | "week";
+  children?: React.ReactNode;
+  className?: string;
+  currentTime?: Date; // For updating time during drag
+  dndAttributes?: DraggableAttributes;
+  dndListeners?: SyntheticListenerMap;
+  isDragging?: boolean;
   isFirstDay?: boolean;
   isLastDay?: boolean;
-  isDragging?: boolean;
+  showTime?: boolean;
   onClick?: (e: React.MouseEvent) => void;
-  className?: string;
-  children: React.ReactNode;
-  currentTime?: Date;
-  dndListeners?: SyntheticListenerMap;
-  dndAttributes?: DraggableAttributes;
   onMouseDown?: (e: React.MouseEvent) => void;
   onTouchStart?: (e: React.TouchEvent) => void;
 }
 
 // Shared wrapper component for event styling
 function EventWrapper({
+  children,
+  className,
+  currentTime,
+  dndAttributes,
+  dndListeners,
   event,
+  isDragging,
   isFirstDay = true,
   isLastDay = true,
-  isDragging,
   onClick,
-  className,
-  children,
-  currentTime,
-  dndListeners,
-  dndAttributes,
   onMouseDown,
   onTouchStart,
 }: EventWrapperProps) {
@@ -68,11 +72,11 @@ function EventWrapper({
         getBorderRadiusClasses(isFirstDay, isLastDay),
         className,
       )}
-      data-dragging={isDragging || undefined}
-      data-past-event={isEventInPast || undefined}
       onClick={onClick}
       onMouseDown={onMouseDown}
       onTouchStart={onTouchStart}
+      data-dragging={isDragging || undefined}
+      data-past-event={isEventInPast || undefined}
       {...dndListeners}
       {...dndAttributes}
     >
@@ -81,36 +85,34 @@ function EventWrapper({
   );
 }
 
-interface EventItemProps {
+interface EventWrapperProps {
+  children: React.ReactNode;
   event: CalendarEvent;
-  view: "month" | "week" | "day" | "agenda";
+  className?: string;
+  currentTime?: Date;
+  dndAttributes?: DraggableAttributes;
+  dndListeners?: SyntheticListenerMap;
   isDragging?: boolean;
-  onClick?: (e: React.MouseEvent) => void;
-  showTime?: boolean;
-  currentTime?: Date; // For updating time during drag
   isFirstDay?: boolean;
   isLastDay?: boolean;
-  children?: React.ReactNode;
-  className?: string;
-  dndListeners?: SyntheticListenerMap;
-  dndAttributes?: DraggableAttributes;
+  onClick?: (e: React.MouseEvent) => void;
   onMouseDown?: (e: React.MouseEvent) => void;
   onTouchStart?: (e: React.TouchEvent) => void;
 }
 
 export function EventItem({
-  event,
-  view,
-  isDragging,
-  onClick,
-  showTime,
-  currentTime,
-  isFirstDay = true,
-  isLastDay = true,
   children,
   className,
-  dndListeners,
+  currentTime,
   dndAttributes,
+  dndListeners,
+  event,
+  isDragging,
+  isFirstDay = true,
+  isLastDay = true,
+  showTime,
+  view,
+  onClick,
   onMouseDown,
   onTouchStart,
 }: EventItemProps) {
@@ -150,20 +152,20 @@ export function EventItem({
   if (view === "month") {
     return (
       <EventWrapper
-        event={event}
-        isFirstDay={isFirstDay}
-        isLastDay={isLastDay}
-        isDragging={isDragging}
-        onClick={onClick}
         className={cn(
           "mt-[var(--event-gap)] h-[var(--event-height)] items-center text-[10px] sm:text-[13px]",
           className,
         )}
-        currentTime={currentTime}
-        dndListeners={dndListeners}
-        dndAttributes={dndAttributes}
+        onClick={onClick}
         onMouseDown={onMouseDown}
         onTouchStart={onTouchStart}
+        currentTime={currentTime}
+        dndAttributes={dndAttributes}
+        dndListeners={dndListeners}
+        event={event}
+        isDragging={isDragging}
+        isFirstDay={isFirstDay}
+        isLastDay={isLastDay}
       >
         {children || (
           <span className="truncate">
@@ -182,22 +184,22 @@ export function EventItem({
   if (view === "week" || view === "day") {
     return (
       <EventWrapper
-        event={event}
-        isFirstDay={isFirstDay}
-        isLastDay={isLastDay}
-        isDragging={isDragging}
-        onClick={onClick}
         className={cn(
           "py-1",
           durationMinutes < 45 ? "items-center" : "flex-col",
           view === "week" ? "text-[10px] sm:text-[13px]" : "text-[13px]",
           className,
         )}
-        currentTime={currentTime}
-        dndListeners={dndListeners}
-        dndAttributes={dndAttributes}
+        onClick={onClick}
         onMouseDown={onMouseDown}
         onTouchStart={onTouchStart}
+        currentTime={currentTime}
+        dndAttributes={dndAttributes}
+        dndListeners={dndListeners}
+        event={event}
+        isDragging={isDragging}
+        isFirstDay={isFirstDay}
+        isLastDay={isLastDay}
       >
         {durationMinutes < 45 ? (
           <div className="truncate">
@@ -230,10 +232,10 @@ export function EventItem({
         getEventColorClasses(eventColor),
         className,
       )}
-      data-past-event={isPast(new Date(event.end)) || undefined}
       onClick={onClick}
       onMouseDown={onMouseDown}
       onTouchStart={onTouchStart}
+      data-past-event={isPast(new Date(event.end)) || undefined}
       {...dndListeners}
       {...dndAttributes}
     >

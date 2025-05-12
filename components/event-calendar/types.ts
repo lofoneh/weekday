@@ -1,15 +1,15 @@
-export type CalendarView = "month" | "week" | "day" | "agenda";
-
 export interface CalendarEvent {
   id: string;
-  title: string;
-  description?: string;
-  start: Date;
   end: Date;
+  start: Date;
+  title: string;
   allDay?: boolean;
   color?: EventColor;
+  description?: string;
   label?: string;
   location?: string;
 }
 
-export type EventColor = "blue" | "orange" | "violet" | "rose" | "emerald";
+export type CalendarView = "agenda" | "day" | "month" | "week";
+
+export type EventColor = "blue" | "emerald" | "orange" | "rose" | "violet";

@@ -1,14 +1,19 @@
 "use client";
 
 import {
+  type ReactNode,
   createContext,
   useContext,
   useId,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
+
 import {
+  type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
+  type UniqueIdentifier,
   DndContext,
   DragOverlay,
   MouseSensor,
@@ -16,32 +21,28 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
-  type DragEndEvent,
-  type DragOverEvent,
-  type DragStartEvent,
-  type UniqueIdentifier,
 } from "@dnd-kit/core";
 import { addMinutes, differenceInMinutes } from "date-fns";
 
-import { EventItem, type CalendarEvent } from "@/components/event-calendar";
+import { type CalendarEvent, EventItem } from "@/components/event-calendar";
 
 // Define the context type
 type CalendarDndContextType = {
   activeEvent: CalendarEvent | null;
   activeId: UniqueIdentifier | null;
-  activeView: "month" | "week" | "day" | null;
+  activeView: "day" | "month" | "week" | null;
   currentTime: Date | null;
-  eventHeight: number | null;
-  isMultiDay: boolean;
-  multiDayWidth: number | null;
   dragHandlePosition: {
-    x?: number;
-    y?: number;
     data?: {
       isFirstDay?: boolean;
       isLastDay?: boolean;
     };
+    x?: number;
+    y?: number;
   } | null;
+  eventHeight: number | null;
+  isMultiDay: boolean;
+  multiDayWidth: number | null;
 };
 
 // Create the context
@@ -50,10 +51,10 @@ const CalendarDndContext = createContext<CalendarDndContextType>({
   activeId: null,
   activeView: null,
   currentTime: null,
+  dragHandlePosition: null,
   eventHeight: null,
   isMultiDay: false,
   multiDayWidth: null,
-  dragHandlePosition: null,
 });
 
 // Hook to use the context
@@ -71,7 +72,7 @@ export function CalendarDndProvider({
 }: CalendarDndProviderProps) {
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
-  const [activeView, setActiveView] = useState<"month" | "week" | "day" | null>(
+  const [activeView, setActiveView] = useState<"day" | "month" | "week" | null>(
     null,
   );
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
@@ -79,12 +80,12 @@ export function CalendarDndProvider({
   const [isMultiDay, setIsMultiDay] = useState(false);
   const [multiDayWidth, setMultiDayWidth] = useState<number | null>(null);
   const [dragHandlePosition, setDragHandlePosition] = useState<{
-    x?: number;
-    y?: number;
     data?: {
       isFirstDay?: boolean;
       isLastDay?: boolean;
     };
+    x?: number;
+    y?: number;
   } | null>(null);
 
   // Store original event dimensions
@@ -126,26 +127,26 @@ export function CalendarDndProvider({
     }
 
     const {
+      dragHandlePosition: eventDragHandlePosition,
       event: calendarEvent,
-      view,
       height,
       isMultiDay: eventIsMultiDay,
       multiDayWidth: eventMultiDayWidth,
-      dragHandlePosition: eventDragHandlePosition,
+      view,
     } = active.data.current as {
       event: CalendarEvent;
-      view: "month" | "week" | "day";
-      height?: number;
-      isMultiDay?: boolean;
-      multiDayWidth?: number;
+      view: "day" | "month" | "week";
       dragHandlePosition?: {
-        x?: number;
-        y?: number;
         data?: {
           isFirstDay?: boolean;
           isLastDay?: boolean;
         };
+        x?: number;
+        y?: number;
       };
+      height?: number;
+      isMultiDay?: boolean;
+      multiDayWidth?: number;
     };
 
     setActiveEvent(calendarEvent);
@@ -304,8 +305,8 @@ export function CalendarDndProvider({
         // Update the event only if the time has changed
         onEventUpdate({
           ...calendarEvent,
-          start: newStart,
           end: newEnd,
+          start: newStart,
         });
       }
     } catch (error) {
@@ -326,10 +327,10 @@ export function CalendarDndProvider({
   return (
     <DndContext
       id={dndContextId}
-      sensors={sensors}
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
+      onDragOver={handleDragOver}
+      onDragStart={handleDragStart}
+      sensors={sensors}
     >
       <CalendarDndContext.Provider
         value={{
@@ -337,10 +338,10 @@ export function CalendarDndProvider({
           activeId,
           activeView,
           currentTime,
+          dragHandlePosition,
           eventHeight,
           isMultiDay,
           multiDayWidth,
-          dragHandlePosition,
         }}
       >
         {children}
@@ -356,13 +357,13 @@ export function CalendarDndProvider({
               }}
             >
               <EventItem
-                event={activeEvent}
-                view={activeView}
-                isDragging={true}
-                showTime={activeView !== "month"}
                 currentTime={currentTime || undefined}
+                event={activeEvent}
+                isDragging={true}
                 isFirstDay={dragHandlePosition?.data?.isFirstDay !== false}
                 isLastDay={dragHandlePosition?.data?.isLastDay !== false}
+                showTime={activeView !== "month"}
+                view={activeView}
               />
             </div>
           )}

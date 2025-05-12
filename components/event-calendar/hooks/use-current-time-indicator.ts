@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import { endOfWeek, isSameDay, isWithinInterval, startOfWeek } from "date-fns";
-import { StartHour, EndHour } from "@/components/event-calendar/constants";
+
+import { EndHour, StartHour } from "@/components/event-calendar/constants";
 
 export function useCurrentTimeIndicator(
   currentDate: Date,
@@ -34,8 +36,8 @@ export function useCurrentTimeIndicator(
         const startOfWeekDate = startOfWeek(currentDate, { weekStartsOn: 0 });
         const endOfWeekDate = endOfWeek(currentDate, { weekStartsOn: 0 });
         isCurrentTimeVisible = isWithinInterval(now, {
-          start: startOfWeekDate,
           end: endOfWeekDate,
+          start: startOfWeekDate,
         });
       }
 

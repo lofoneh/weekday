@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
+
 import { format, isSameDay } from "date-fns";
 import { XIcon } from "lucide-react";
 
-import { EventItem, type CalendarEvent } from "@/components/event-calendar";
+import { type CalendarEvent, EventItem } from "@/components/event-calendar";
 
 interface EventsPopupProps {
   date: Date;
   events: CalendarEvent[];
-  position: { top: number; left: number };
+  position: { left: number; top: number; };
   onClose: () => void;
   onEventSelect: (event: CalendarEvent) => void;
 }
@@ -88,15 +89,15 @@ export function EventsPopup({
       ref={popupRef}
       className="bg-background absolute z-50 max-h-96 w-80 overflow-auto rounded-md border shadow-lg"
       style={{
-        top: `${adjustedPosition.top}px`,
         left: `${adjustedPosition.left}px`,
+        top: `${adjustedPosition.top}px`,
       }}
     >
       <div className="bg-background sticky top-0 flex items-center justify-between border-b p-3">
         <h3 className="font-medium">{format(date, "d MMMM yyyy")}</h3>
         <button
-          onClick={onClose}
           className="hover:bg-muted rounded-full p-1"
+          onClick={onClose}
           aria-label="Close"
         >
           <XIcon className="h-4 w-4" />
@@ -121,9 +122,9 @@ export function EventsPopup({
               >
                 <EventItem
                   event={event}
-                  view="agenda"
                   isFirstDay={isFirstDay}
                   isLastDay={isLastDay}
+                  view="agenda"
                 />
               </div>
             );
