@@ -33,8 +33,7 @@ model User {
   sessions      Session[]
   accounts      Account[]
 
-
-  posts          Post[]
+  posts Post[]
 
   @@unique([email])
   @@map("user")

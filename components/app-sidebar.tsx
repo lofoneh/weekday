@@ -23,6 +23,7 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import type { Session } from "@/server/auth";
 
 const data = {
   user: {
@@ -33,8 +34,12 @@ const data = {
   },
 };
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({
+  session,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & { session: Session }) {
   const { isColorVisible, toggleColorVisibility } = useCalendarContext();
+
   return (
     <Sidebar
       variant="inset"
@@ -42,7 +47,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       className="dark scheme-only-dark max-lg:p-3 lg:pe-1"
     >
       <SidebarHeader>
-        <div className="flex justify-between items-center gap-2">
+        <div className="flex items-center justify-between gap-2">
           <Link className="inline-flex" href="/">
             <span className="sr-only">Logo</span>
             <svg
@@ -64,12 +69,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarTrigger className="text-muted-foreground/80 hover:text-foreground/80 hover:bg-transparent!" />
         </div>
       </SidebarHeader>
-      <SidebarContent className="gap-0 mt-3 pt-3 border-t">
+      <SidebarContent className="mt-3 gap-0 border-t pt-3">
         <SidebarGroup className="px-1">
           <SidebarCalendar />
         </SidebarGroup>
-        <SidebarGroup className="px-1 mt-3 pt-4 border-t">
-          <SidebarGroupLabel className="uppercase text-muted-foreground/65">
+        <SidebarGroup className="mt-3 border-t px-1 pt-4">
+          <SidebarGroupLabel className="text-muted-foreground/65 uppercase">
             Calendars
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -78,13 +83,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <SidebarMenuItem key={item.id}>
                   <SidebarMenuButton
                     asChild
-                    className="relative rounded-md [&>svg]:size-auto justify-between has-focus-visible:border-ring has-focus-visible:ring-ring/50 has-focus-visible:ring-[3px]"
+                    className="has-focus-visible:border-ring has-focus-visible:ring-ring/50 relative justify-between rounded-md has-focus-visible:ring-[3px] [&>svg]:size-auto"
                   >
                     <span>
-                      <span className="font-medium flex items-center justify-between gap-3">
+                      <span className="flex items-center justify-between gap-3 font-medium">
                         <Checkbox
                           id={item.id}
-                          className="sr-only peer"
+                          className="peer sr-only"
                           checked={isColorVisible(item.color)}
                           onCheckedChange={() =>
                             toggleColorVisibility(item.color)
@@ -96,7 +101,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           aria-hidden="true"
                         />
                         <label
-                          className="peer-not-data-[state=checked]:line-through peer-not-data-[state=checked]:text-muted-foreground/65 after:absolute after:inset-0"
+                          className="peer-not-data-[state=checked]:text-muted-foreground/65 peer-not-data-[state=checked]:line-through after:absolute after:inset-0"
                           htmlFor={item.id}
                         >
                           {item.name}
@@ -119,7 +124,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={session.user} />
       </SidebarFooter>
     </Sidebar>
   );

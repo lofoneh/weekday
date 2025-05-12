@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { CalendarProvider } from "@/components/event-calendar/calendar-context";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/providers/theme-provider";
+import { TRPCReactProvider } from "@/trpc/react";
 
 import "./globals.css";
 
@@ -32,8 +33,10 @@ export default function RootLayout({
           disableTransitionOnChange
           enableSystem
         >
-          <CalendarProvider>{children}</CalendarProvider>
-          <Toaster />
+          <TRPCReactProvider>
+            <CalendarProvider>{children}</CalendarProvider>
+            <Toaster />
+          </TRPCReactProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -1,14 +1,13 @@
+import { env } from "@/env";
+import { db } from "@/server/db";
 import { betterAuth as betterAuthClient } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { PrismaClient } from "@prisma/client";
-import { env } from "@/env";
 import { nextCookies } from "better-auth/next-js";
-import { cache } from "react";
 import { headers } from "next/headers";
+import { cache } from "react";
 
-const prisma = new PrismaClient();
 const betterAuth = betterAuthClient({
-  database: prismaAdapter(prisma, {
+  database: prismaAdapter(db, {
     provider: "postgresql",
   }),
   socialProviders: {
