@@ -5,6 +5,7 @@ import {
   ProcessedCalendarListEntrySchema,
 } from "@/server/api/routers/schema";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import { authInstance } from "@/server/auth";
 
 const GOOGLE_CALENDAR_LIST_API_URL =
   "https://www.googleapis.com/calendar/v3/users/me/calendarList";
@@ -13,20 +14,23 @@ export const calendarRouter = createTRPCRouter({
   getAllCalendarList: protectedProcedure
     .output(z.array(ProcessedCalendarListEntrySchema))
     .query(async ({ ctx }) => {
-      const accessTokens = await ctx.db.account.findMany({
+      const account = await ctx.db.account.findFirst({
         select: {
+          id: true,
           accessToken: true,
+          refreshToken: true,
         },
         where: {
+          providerId: "google",
           userId: ctx.session.user.id,
         },
       });
-      const accessToken = accessTokens[0]?.accessToken;
 
-      if (!accessToken) {
+      if (!account?.accessToken) {
         throw new Error("No access token found");
       }
 
+      let accessToken = account.accessToken;
       const headers = new Headers();
       headers.append("Authorization", `Bearer ${accessToken}`);
       headers.append("Accept", "application/json");
@@ -39,12 +43,36 @@ export const calendarRouter = createTRPCRouter({
       };
 
       try {
-        const response = await fetch(
+        let response = await fetch(
           GOOGLE_CALENDAR_LIST_API_URL,
           requestOptions,
         );
 
+        if (response.status === 401 && account.refreshToken) {
+          console.log("Access token expired, refreshing via Better Auth...");
+
+          const refreshedAccount = await authInstance.api.refreshToken({
+            body: {
+              accountId: account.id,
+              providerId: "google",
+              userId: ctx.session.user.id,
+            },
+          });
+
+          if (refreshedAccount?.accessToken) {
+            accessToken = refreshedAccount.accessToken;
+            headers.set("Authorization", `Bearer ${accessToken}`);
+
+            response = await fetch(GOOGLE_CALENDAR_LIST_API_URL, {
+              ...requestOptions,
+              headers,
+            });
+          }
+        }
+
         if (!response.ok) {
+          const error = await response.json();
+          console.error("Error fetching calendar list:", error);
           throw new Error(
             `HTTP error! status: ${response.status} - ${response.statusText}`,
           );

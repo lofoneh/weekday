@@ -41,6 +41,7 @@ const betterAuth = betterAuthClient({
 });
 
 export const { handler } = betterAuth;
+export const authInstance = betterAuth;
 
 export const auth = cache(async () => {
   const session = await betterAuth.api.getSession({

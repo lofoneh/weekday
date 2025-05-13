@@ -21,12 +21,12 @@ import {
 import { toast } from "sonner";
 
 import {
+  type CalendarEvent,
+  type CalendarView,
   addHoursToDate,
   AgendaDaysToShow,
   AgendaView,
   CalendarDndProvider,
-  CalendarEvent,
-  CalendarView,
   DayView,
   EventDialog,
   EventGap,
@@ -35,7 +35,6 @@ import {
   WeekCellsHeight,
   WeekView,
 } from "@/components/event-calendar";
-import Participants from "@/components/participants";
 import ThemeToggle from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
@@ -268,7 +267,7 @@ export function EventCalendar({
 
   return (
     <div
-      className="flex has-data-[slot=month-view]:flex-1 flex-col rounded-lg"
+      className="flex flex-col rounded-lg has-data-[slot=month-view]:flex-1"
       style={
         {
           "--event-gap": `${EventGap}px`,
@@ -280,26 +279,27 @@ export function EventCalendar({
       <CalendarDndProvider onEventUpdate={handleEventUpdate}>
         <div
           className={cn(
-            "flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-5 sm:px-4",
+            "flex flex-col justify-between gap-2 py-5 sm:flex-row sm:items-center sm:px-4",
             className,
           )}
         >
-          <div className="flex sm:flex-col max-sm:items-center justify-between gap-1.5">
+          <div className="flex justify-between gap-1.5 max-sm:items-center sm:flex-col">
             <div className="flex items-center gap-1.5">
               <SidebarTrigger
-                className="peer size-7 text-muted-foreground/80 hover:text-foreground/80 hover:bg-transparent! sm:-ms-1.5 lg:data-[state=invisible]:opacity-0 lg:data-[state=invisible]:pointer-events-none transition-opacity ease-in-out duration-200"
+                className="peer text-muted-foreground/80 hover:text-foreground/80 size-7 transition-opacity duration-200 ease-in-out hover:bg-transparent! sm:-ms-1.5 lg:data-[state=invisible]:pointer-events-none lg:data-[state=invisible]:opacity-0"
                 data-state={open ? "invisible" : "visible"}
                 isOutsideSidebar
               />
-              <h2 className="font-semibold text-xl lg:peer-data-[state=invisible]:-translate-x-7.5 transition-transform ease-in-out duration-300">
+              <h2 className="text-xl font-semibold transition-transform duration-300 ease-in-out lg:peer-data-[state=invisible]:-translate-x-7.5">
                 {viewTitle}
               </h2>
             </div>
-            <Participants />
+            {/* Not needed for now */}
+            {/* <Participants /> */}
           </div>
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center sm:gap-2 max-sm:order-1">
+              <div className="flex items-center max-sm:order-1 sm:gap-2">
                 <Button
                   size="icon"
                   variant="ghost"
@@ -341,7 +341,7 @@ export function EventCalendar({
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
-                    className="gap-1.5 max-sm:h-8 max-sm:px-2! max-sm:gap-1"
+                    className="gap-1.5 max-sm:h-8 max-sm:gap-1 max-sm:px-2!"
                   >
                     <span className="capitalize">{view}</span>
                     <ChevronDownIcon
