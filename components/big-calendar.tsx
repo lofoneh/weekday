@@ -2,13 +2,28 @@
 
 import { useMemo } from "react";
 
+import { addMonths, endOfMonth, startOfMonth, subMonths } from "date-fns";
+
 import { type CalendarEvent, EventCalendar } from "@/components/event-calendar";
 import { useCalendarContext } from "@/components/event-calendar/calendar-context";
 import { api } from "@/trpc/react";
 
 export default function Component() {
-  const { isCalendarVisible } = useCalendarContext();
-  const { data: fetchedEvents } = api.calendar.getEvents.useQuery();
+  const { currentDate, isCalendarVisible } = useCalendarContext();
+
+  const { timeMax, timeMin } = useMemo(() => {
+    const start = startOfMonth(subMonths(currentDate, 1));
+    const end = endOfMonth(addMonths(currentDate, 1));
+    return {
+      timeMax: end.toISOString(),
+      timeMin: start.toISOString(),
+    };
+  }, [currentDate]);
+
+  const { data: fetchedEvents } = api.calendar.getEvents.useQuery({
+    timeMax,
+    timeMin,
+  });
 
   const events = useMemo(() => {
     if (!fetchedEvents) return [];
