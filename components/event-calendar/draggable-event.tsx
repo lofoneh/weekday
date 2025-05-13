@@ -7,7 +7,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { differenceInDays } from "date-fns";
 
 import {
-  CalendarEvent,
+  type CalendarEvent,
   EventItem,
   useCalendarDnd,
 } from "@/components/event-calendar";
