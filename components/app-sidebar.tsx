@@ -7,7 +7,6 @@ import type { Session } from "@/server/auth";
 import { RiCheckLine } from "@remixicon/react";
 import Link from "next/link";
 
-import { etiquettes } from "@/components/big-calendar";
 import { useCalendarContext } from "@/components/event-calendar/calendar-context";
 import { NavUser } from "@/components/nav-user";
 import SidebarCalendar from "@/components/sidebar-calendar";
@@ -25,21 +24,16 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-
-const data = {
-  user: {
-    avatar:
-      "https://res.cloudinary.com/dlzlfasou/image/upload/v1743935337/user-01_l4if9t.png",
-    email: "sofia@safier.com",
-    name: "Sofia Safier",
-  },
-};
+import { api } from "@/trpc/react";
 
 export function AppSidebar({
   session,
   ...props
 }: React.ComponentProps<typeof Sidebar> & { session: Session }) {
   const { isColorVisible, toggleColorVisibility } = useCalendarContext();
+  const defaultColors = ["blue", "emerald", "orange", "rose", "violet"];
+
+  const { data: calendars } = api.calendar.getAllCalendarList.useQuery();
 
   return (
     <Sidebar
@@ -80,46 +74,49 @@ export function AppSidebar({
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {etiquettes.map((item) => (
-                <SidebarMenuItem key={item.id}>
-                  <SidebarMenuButton
-                    asChild
-                    className="has-focus-visible:border-ring has-focus-visible:ring-ring/50 relative justify-between rounded-md has-focus-visible:ring-[3px] [&>svg]:size-auto"
-                  >
-                    <span>
-                      <span className="flex items-center justify-between gap-3 font-medium">
-                        <Checkbox
-                          id={item.id}
-                          className="peer sr-only"
-                          checked={isColorVisible(item.color)}
-                          onCheckedChange={() =>
-                            toggleColorVisibility(item.color)
+              {calendars?.map((calendar, index) => {
+                const color =
+                  defaultColors[index % defaultColors.length] ?? "gray";
+
+                return (
+                  <SidebarMenuItem key={calendar.id}>
+                    <SidebarMenuButton
+                      asChild
+                      className="has-focus-visible:border-ring has-focus-visible:ring-ring/50 relative justify-between rounded-md has-focus-visible:ring-[3px] [&>svg]:size-auto"
+                    >
+                      <span>
+                        <span className="flex items-center justify-between gap-3 font-medium">
+                          <Checkbox
+                            id={calendar.id}
+                            className="peer sr-only"
+                            checked={isColorVisible(color)}
+                            onCheckedChange={() => toggleColorVisibility(color)}
+                          />
+                          <RiCheckLine
+                            size={16}
+                            className="peer-not-data-[state=checked]:invisible"
+                            aria-hidden="true"
+                          />
+                          <label
+                            className="peer-not-data-[state=checked]:text-muted-foreground/65 peer-not-data-[state=checked]:line-through after:absolute after:inset-0"
+                            htmlFor={calendar.id}
+                          >
+                            {calendar.summary ?? ""}
+                          </label>
+                        </span>
+                        <span
+                          className="size-1.5 rounded-full bg-(--event-color)"
+                          style={
+                            {
+                              "--event-color": `var(--color-${color}-400)`,
+                            } as React.CSSProperties
                           }
-                        />
-                        <RiCheckLine
-                          size={16}
-                          className="peer-not-data-[state=checked]:invisible"
-                          aria-hidden="true"
-                        />
-                        <label
-                          className="peer-not-data-[state=checked]:text-muted-foreground/65 peer-not-data-[state=checked]:line-through after:absolute after:inset-0"
-                          htmlFor={item.id}
-                        >
-                          {item.name}
-                        </label>
+                        ></span>
                       </span>
-                      <span
-                        className="size-1.5 rounded-full bg-(--event-color)"
-                        style={
-                          {
-                            "--event-color": `var(--color-${item.color}-400)`,
-                          } as React.CSSProperties
-                        }
-                      ></span>
-                    </span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

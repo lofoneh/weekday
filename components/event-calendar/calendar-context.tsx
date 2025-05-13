@@ -1,8 +1,6 @@
 "use client";
 
-import React, { createContext, ReactNode, useContext, useState } from "react";
-
-import { etiquettes } from "@/components/big-calendar";
+import { type ReactNode, createContext, useContext, useState } from "react";
 
 interface CalendarContextType {
   // Date management
@@ -36,12 +34,10 @@ interface CalendarProviderProps {
 export function CalendarProvider({ children }: CalendarProviderProps) {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
 
-  // Initialize visibleColors based on the isActive property in etiquettes
+  // Initialize visibleColors based on the default colors
   const [visibleColors, setVisibleColors] = useState<string[]>(() => {
-    // Filter etiquettes to get only those that are active
-    return etiquettes
-      .filter((etiquette) => etiquette.isActive)
-      .map((etiquette) => etiquette.color);
+    // All default colors are initially active
+    return ["blue", "emerald", "orange", "rose", "violet"];
   });
 
   // Toggle visibility of a color

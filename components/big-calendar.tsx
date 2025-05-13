@@ -4,48 +4,9 @@ import { useMemo, useState } from "react";
 
 import { addDays, getDay, setHours, setMinutes } from "date-fns";
 
-import {
-  type CalendarEvent,
-  type EventColor,
-  EventCalendar,
-} from "@/components/event-calendar";
+import { type CalendarEvent, EventCalendar } from "@/components/event-calendar";
 import { useCalendarContext } from "@/components/event-calendar/calendar-context";
 
-// Etiquettes data for calendar filtering
-export const etiquettes = [
-  {
-    id: "my-events",
-    color: "emerald" as EventColor,
-    isActive: true,
-    name: "My Events",
-  },
-  {
-    id: "marketing-team",
-    color: "orange" as EventColor,
-    isActive: true,
-    name: "Marketing Team",
-  },
-  {
-    id: "interviews",
-    color: "violet" as EventColor,
-    isActive: true,
-    name: "Interviews",
-  },
-  {
-    id: "events-planning",
-    color: "blue" as EventColor,
-    isActive: true,
-    name: "Events Planning",
-  },
-  {
-    id: "holidays",
-    color: "rose" as EventColor,
-    isActive: true,
-    name: "Holidays",
-  },
-];
-
-// Function to calculate days until next Sunday
 const getDaysUntilNextSunday = (date: Date) => {
   const day = getDay(date); // 0 is Sunday, 6 is Saturday
   return day === 0 ? 0 : 7 - day; // If today is Sunday, return 0, otherwise calculate days until Sunday

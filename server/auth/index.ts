@@ -12,6 +12,15 @@ const betterAuth = betterAuthClient({
   database: prismaAdapter(db, {
     provider: "postgresql",
   }),
+  databaseHooks: {
+    account: {
+      create: {
+        async before(account) {
+          console.log(account, "account");
+        },
+      },
+    },
+  },
   plugins: [nextCookies()], // make sure nextCookies is the last plugin in the array
   session: {
     expiresIn: 60 * 60 * 24 * 14, // 14 days
