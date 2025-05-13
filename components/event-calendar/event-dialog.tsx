@@ -57,55 +57,59 @@ export function EventDialog({
   onDelete,
   onSave,
 }: EventDialogProps) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [startDate, setStartDate] = useState<Date>(new Date());
-  const [endDate, setEndDate] = useState<Date>(new Date());
-  const [startTime, setStartTime] = useState(`${DefaultStartHour}:00`);
-  const [endTime, setEndTime] = useState(`${DefaultEndHour}:00`);
-  const [allDay, setAllDay] = useState(false);
-  const [location, setLocation] = useState("");
-  const [color, setColor] = useState<EventColor>("blue");
+  const [formState, setFormState] = useState({
+    allDay: false,
+    color: "blue" as EventColor,
+    description: "",
+    endDate: new Date(),
+    endTime: `${DefaultEndHour}:00`,
+    location: "",
+    startDate: new Date(),
+    startTime: `${DefaultStartHour}:00`,
+    title: "",
+  });
   const [error, setError] = useState<string | null>(null);
-  const [startDateOpen, setStartDateOpen] = useState(false);
-  const [endDateOpen, setEndDateOpen] = useState(false);
+  const [uiState, setUiState] = useState({
+    endDateOpen: false,
+    startDateOpen: false,
+  });
 
-  // Debug log to check what event is being passed
-  useEffect(() => {
-    console.log("EventDialog received event:", event);
-  }, [event]);
+  // Initialize form with event data when it changes
 
   useEffect(() => {
     if (event) {
-      setTitle(event.title || "");
-      setDescription(event.description || "");
-
       const start = new Date(event.start);
       const end = new Date(event.end);
 
-      setStartDate(start);
-      setEndDate(end);
-      setStartTime(formatTimeForInput(start));
-      setEndTime(formatTimeForInput(end));
-      setAllDay(event.allDay || false);
-      setLocation(event.location || "");
-      setColor((event.color as EventColor) || "sky");
-      setError(null); // Reset error when opening dialog
+      setFormState({
+        allDay: event.allDay || false,
+        color: (event.color as EventColor) || "sky",
+        description: event.description || "",
+        endDate: end,
+        endTime: formatTimeForInput(end),
+        location: event.location || "",
+        startDate: start,
+        startTime: formatTimeForInput(start),
+        title: event.title || "",
+      });
+      setError(null);
     } else {
       resetForm();
     }
   }, [event]);
 
   const resetForm = () => {
-    setTitle("");
-    setDescription("");
-    setStartDate(new Date());
-    setEndDate(new Date());
-    setStartTime(`${DefaultStartHour}:00`);
-    setEndTime(`${DefaultEndHour}:00`);
-    setAllDay(false);
-    setLocation("");
-    setColor("blue");
+    setFormState({
+      allDay: false,
+      color: "blue" as EventColor,
+      description: "",
+      endDate: new Date(),
+      endTime: `${DefaultEndHour}:00`,
+      location: "",
+      startDate: new Date(),
+      startTime: `${DefaultStartHour}:00`,
+      title: "",
+    });
     setError(null);
   };
 
@@ -133,14 +137,16 @@ export function EventDialog({
   }, []); // Empty dependency array ensures this only runs once
 
   const handleSave = () => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = new Date(formState.startDate);
+    const end = new Date(formState.endDate);
 
-    if (!allDay) {
-      const [startHours = 0, startMinutes = 0] = startTime
+    if (!formState.allDay) {
+      const [startHours = 0, startMinutes = 0] = formState.startTime
         .split(":")
         .map(Number);
-      const [endHours = 0, endMinutes = 0] = endTime.split(":").map(Number);
+      const [endHours = 0, endMinutes = 0] = formState.endTime
+        .split(":")
+        .map(Number);
 
       if (
         startHours < StartHour ||
@@ -168,15 +174,15 @@ export function EventDialog({
     }
 
     // Use generic title if empty
-    const eventTitle = title.trim() ? title : "(no title)";
+    const eventTitle = formState.title.trim() ? formState.title : "(no title)";
 
     onSave({
       id: event?.id || "",
-      allDay,
-      color,
-      description,
+      allDay: formState.allDay,
+      color: formState.color,
+      description: formState.description,
       end,
-      location,
+      location: formState.location,
       start,
       title: eventTitle,
     });
@@ -227,6 +233,21 @@ export function EventDialog({
     },
   ];
 
+  const updateFormField = (field: string, value: any) => {
+    setFormState((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const setStartDateOpen = (open: boolean) => {
+    setUiState((prev) => ({ ...prev, startDateOpen: open }));
+  };
+
+  const setEndDateOpen = (open: boolean) => {
+    setUiState((prev) => ({ ...prev, endDateOpen: open }));
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[425px]">
@@ -248,8 +269,8 @@ export function EventDialog({
             <Label htmlFor="title">Title</Label>
             <Input
               id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              value={formState.title}
+              onChange={(e) => updateFormField("title", e.target.value)}
             />
           </div>
 
@@ -257,8 +278,8 @@ export function EventDialog({
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              value={formState.description}
+              onChange={(e) => updateFormField("description", e.target.value)}
               rows={3}
             />
           </div>
@@ -266,23 +287,28 @@ export function EventDialog({
           <div className="flex gap-4">
             <div className="flex-1 *:not-first:mt-1.5">
               <Label htmlFor="start-date">Start Date</Label>
-              <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+              <Popover
+                open={uiState.startDateOpen}
+                onOpenChange={setStartDateOpen}
+              >
                 <PopoverTrigger asChild>
                   <Button
                     id="start-date"
                     variant="outline"
                     className={cn(
                       "group bg-background hover:bg-background border-input w-full justify-between px-3 font-normal outline-offset-0 outline-none focus-visible:outline-[3px]",
-                      !startDate && "text-muted-foreground",
+                      !formState.startDate && "text-muted-foreground",
                     )}
                   >
                     <span
                       className={cn(
                         "truncate",
-                        !startDate && "text-muted-foreground",
+                        !formState.startDate && "text-muted-foreground",
                       )}
                     >
-                      {startDate ? format(startDate, "PPP") : "Pick a date"}
+                      {formState.startDate
+                        ? format(formState.startDate, "PPP")
+                        : "Pick a date"}
                     </span>
                     <RiCalendarLine
                       size={16}
@@ -293,29 +319,35 @@ export function EventDialog({
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-2" align="start">
                   <Calendar
-                    selected={startDate}
+                    selected={formState.startDate}
                     onSelect={(date) => {
                       if (date) {
-                        setStartDate(date);
-                        // If end date is before the new start date, update it to match the start date
-                        if (isBefore(endDate, date)) {
-                          setEndDate(date);
-                        }
+                        const newEndDate = isBefore(formState.endDate, date)
+                          ? date
+                          : formState.endDate;
+                        setFormState((prev) => ({
+                          ...prev,
+                          endDate: newEndDate,
+                          startDate: date,
+                        }));
                         setError(null);
                         setStartDateOpen(false);
                       }
                     }}
-                    defaultMonth={startDate}
+                    defaultMonth={formState.startDate}
                     mode="single"
                   />
                 </PopoverContent>
               </Popover>
             </div>
 
-            {!allDay && (
+            {!formState.allDay && (
               <div className="min-w-28 *:not-first:mt-1.5">
                 <Label htmlFor="start-time">Start Time</Label>
-                <Select value={startTime} onValueChange={setStartTime}>
+                <Select
+                  value={formState.startTime}
+                  onValueChange={(value) => updateFormField("startTime", value)}
+                >
                   <SelectTrigger id="start-time">
                     <SelectValue placeholder="Select time" />
                   </SelectTrigger>
@@ -334,23 +366,25 @@ export function EventDialog({
           <div className="flex gap-4">
             <div className="flex-1 *:not-first:mt-1.5">
               <Label htmlFor="end-date">End Date</Label>
-              <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+              <Popover open={uiState.endDateOpen} onOpenChange={setEndDateOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     id="end-date"
                     variant="outline"
                     className={cn(
                       "group bg-background hover:bg-background border-input w-full justify-between px-3 font-normal outline-offset-0 outline-none focus-visible:outline-[3px]",
-                      !endDate && "text-muted-foreground",
+                      !formState.endDate && "text-muted-foreground",
                     )}
                   >
                     <span
                       className={cn(
                         "truncate",
-                        !endDate && "text-muted-foreground",
+                        !formState.endDate && "text-muted-foreground",
                       )}
                     >
-                      {endDate ? format(endDate, "PPP") : "Pick a date"}
+                      {formState.endDate
+                        ? format(formState.endDate, "PPP")
+                        : "Pick a date"}
                     </span>
                     <RiCalendarLine
                       size={16}
@@ -361,26 +395,29 @@ export function EventDialog({
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-2" align="start">
                   <Calendar
-                    disabled={{ before: startDate }}
-                    selected={endDate}
+                    disabled={{ before: formState.startDate }}
+                    selected={formState.endDate}
                     onSelect={(date) => {
                       if (date) {
-                        setEndDate(date);
+                        updateFormField("endDate", date);
                         setError(null);
                         setEndDateOpen(false);
                       }
                     }}
-                    defaultMonth={endDate}
+                    defaultMonth={formState.endDate}
                     mode="single"
                   />
                 </PopoverContent>
               </Popover>
             </div>
 
-            {!allDay && (
+            {!formState.allDay && (
               <div className="min-w-28 *:not-first:mt-1.5">
                 <Label htmlFor="end-time">End Time</Label>
-                <Select value={endTime} onValueChange={setEndTime}>
+                <Select
+                  value={formState.endTime}
+                  onValueChange={(value) => updateFormField("endTime", value)}
+                >
                   <SelectTrigger id="end-time">
                     <SelectValue placeholder="Select time" />
                   </SelectTrigger>
@@ -399,8 +436,10 @@ export function EventDialog({
           <div className="flex items-center gap-2">
             <Checkbox
               id="all-day"
-              checked={allDay}
-              onCheckedChange={(checked) => setAllDay(checked === true)}
+              checked={formState.allDay}
+              onCheckedChange={(checked) =>
+                updateFormField("allDay", checked === true)
+              }
             />
             <Label htmlFor="all-day">All day</Label>
           </div>
@@ -409,8 +448,8 @@ export function EventDialog({
             <Label htmlFor="location">Location</Label>
             <Input
               id="location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
+              value={formState.location}
+              onChange={(e) => updateFormField("location", e.target.value)}
             />
           </div>
           <fieldset className="space-y-4">
@@ -420,8 +459,10 @@ export function EventDialog({
             <RadioGroup
               className="flex gap-1.5"
               defaultValue={colorOptions[0]?.value}
-              value={color}
-              onValueChange={(value: EventColor) => setColor(value)}
+              value={formState.color}
+              onValueChange={(value: EventColor) =>
+                updateFormField("color", value)
+              }
             >
               {colorOptions.map((colorOption) => (
                 <RadioGroupItem
