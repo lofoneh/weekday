@@ -28,9 +28,6 @@ export function ChatSidebar() {
     useChat({
       id: chatId,
       api: "/api/ai/chat",
-      body: {
-        document,
-      },
     } satisfies UseChatOptions);
 
   const handleFormSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
@@ -79,7 +76,7 @@ export function ChatSidebar() {
                       return isAssistant ? (
                         <div
                           key={`${message.id}-text-${index}`}
-                          className="bg-secondary text-foreground prose rounded-lg p-2"
+                          className="text-foreground prose rounded-lg p-2"
                         >
                           <Markdown className="prose dark:prose-invert">
                             {part.text}
@@ -88,7 +85,7 @@ export function ChatSidebar() {
                       ) : (
                         <MessageContent
                           key={`${message.id}-text-${index}`}
-                          className="bg-primary text-primary-foreground prose-invert"
+                          className="bg-sidebar text-primary-foreground prose-invert"
                           markdown
                         >
                           {part.text}

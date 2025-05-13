@@ -33,76 +33,11 @@ export function ChatPromptInput({
       isLoading={isLoading}
     >
       <PromptInputTextarea
-        className="text-base placeholder:text-base"
+        className="dark:bg-background text-base placeholder:text-base"
         placeholder="Ask anything..."
       />
-      <PromptInputActions className="mt-0 mb-2 flex h-auto items-center justify-between gap-2 sm:mt-5">
-        <div className="flex items-center gap-x-1.5">
-          {/* <PromptInputAction
-            className="duration-0 data-[state=closed]:duration-0"
-            delayDuration={0}
-            tooltip={
-              <div className="bg-black">
-                <Arrow className="fill-black" />
-                <span className="text-xs font-semibold leading-none text-white">
-                  Attach files
-                </span>
-              </div>
-            }
-          >
-            <Button
-              size="icon"
-              variant="ghost"
-              className="border-input bg-background text-secondary-foreground hover:bg-secondary h-9 w-9 rounded-full border p-1 text-xs font-semibold focus-visible:outline-black [&_svg]:size-[18px]"
-              aria-label="Attach files"
-            >
-              <Plus />
-            </Button>
-          </PromptInputAction>
-          <PromptInputAction
-            className="duration-0 data-[state=closed]:duration-0"
-            delayDuration={0}
-            tooltip={
-              <div className="bg-black">
-                <Arrow className="fill-black" />
-                <span className="text-xs font-semibold leading-none text-white">
-                  Search the web
-                </span>
-              </div>
-            }
-          >
-            <Button
-              size="icon"
-              variant="ghost"
-              className="border-input bg-background text-secondary-foreground hover:bg-secondary h-9 w-auto rounded-full border p-2 text-xs font-semibold focus-visible:outline-black [&_svg]:size-[18px]"
-              aria-label="Search the web"
-            >
-              <Globe />
-              Search
-            </Button>
-          </PromptInputAction>
-          <PromptInputAction
-            className="duration-0 data-[state=closed]:duration-0"
-            delayDuration={0}
-            tooltip={
-              <div className="bg-black">
-                <Arrow className="fill-black" />
-                <span className="text-xs font-semibold leading-none text-white">
-                  View tools
-                </span>
-              </div>
-            }
-          >
-            <Button
-              size="icon"
-              variant="ghost"
-              className="border-input bg-background text-secondary-foreground hover:bg-secondary h-9 w-9 rounded-full border p-1 text-xs font-semibold focus-visible:outline-black [&_svg]:size-[18px]"
-              aria-label="View tools"
-            >
-              <Ellipsis />
-            </Button>
-          </PromptInputAction> */}
-        </div>
+      <PromptInputActions className="bg-background mt-0 mb-2 flex h-auto items-center justify-between gap-2 sm:mt-5">
+        <div className="flex items-center gap-x-1.5"></div>
         <PromptInputAction
           className="duration-0 data-[state=closed]:duration-0"
           delayDuration={0}
