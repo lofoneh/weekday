@@ -181,10 +181,10 @@ export const calendarRouter = createTRPCRouter({
           if (refreshedAccount?.accessToken) {
             accessToken = refreshedAccount.accessToken;
             headers.set("Authorization", `Bearer ${accessToken}`);
-            calListResponse = await fetch(
-              GOOGLE_CALENDAR_LIST_API_URL,
-              requestOptions,
-            );
+            calListResponse = await fetch(GOOGLE_CALENDAR_LIST_API_URL, {
+              ...requestOptions,
+              headers,
+            });
           }
         }
 
@@ -251,7 +251,11 @@ export const calendarRouter = createTRPCRouter({
             if (refreshedAccount?.accessToken) {
               accessToken = refreshedAccount.accessToken;
               headers.set("Authorization", `Bearer ${accessToken}`);
-              evResponse = await fetch(url, requestOptions);
+              const retryRequestOptions = {
+                ...requestOptions,
+                headers,
+              };
+              evResponse = await fetch(url, retryRequestOptions);
             }
           }
 

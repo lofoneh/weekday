@@ -21,13 +21,14 @@ const betterAuth = betterAuthClient({
       },
     },
   },
-  plugins: [nextCookies()], // make sure nextCookies is the last plugin in the array
+  plugins: [nextCookies()],
   session: {
-    expiresIn: 60 * 60 * 24 * 14, // 14 days
-    updateAge: 60 * 60 * 24, // 1 day (every 1 day the session expiration is updated)
+    expiresIn: 60 * 60 * 24 * 14,
+    updateAge: 60 * 60 * 24,
   },
   socialProviders: {
     google: {
+      accessType: "offline",
       clientId: env.BETTER_AUTH_GOOGLE_ID,
       clientSecret: env.BETTER_AUTH_GOOGLE_SECRET,
       scope: [
