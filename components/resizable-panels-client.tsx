@@ -30,7 +30,7 @@ export function ResizablePanelsClient() {
         <>
           <ResizableHandle className="bg-sidebar w-2 scheme-only-dark" />
 
-          <ResizablePanel defaultSize={25} minSize={20}>
+          <ResizablePanel defaultSize={30} minSize={20}>
             <ChatSidebar />
           </ResizablePanel>
         </>
