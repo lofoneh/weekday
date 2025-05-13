@@ -272,7 +272,7 @@ export function EventCalendar({
 
   return (
     <div
-      className="flex flex-col rounded-lg has-data-[slot=month-view]:flex-1"
+      className="bg-background flex h-full flex-col rounded-2xl has-data-[slot=month-view]:flex-1"
       style={
         {
           "--event-gap": `${EventGap}px`,
@@ -288,8 +288,8 @@ export function EventCalendar({
             className,
           )}
         >
-          <div className="flex justify-between gap-1.5 max-sm:items-center sm:flex-col">
-            <div className="flex items-center gap-1.5">
+          <div className="flex items-start justify-start">
+            <div className="flex items-center gap-1.5 self-start">
               <SidebarTrigger
                 className="peer text-muted-foreground/80 hover:text-foreground/80 size-7 transition-opacity duration-200 ease-in-out hover:bg-transparent! sm:-ms-1.5 lg:data-[state=invisible]:pointer-events-none lg:data-[state=invisible]:opacity-0"
                 data-state={open ? "invisible" : "visible"}
@@ -299,8 +299,6 @@ export function EventCalendar({
                 {viewTitle}
               </h2>
             </div>
-            {/* Not needed for now */}
-            {/* <Participants /> */}
           </div>
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center justify-between gap-2">
