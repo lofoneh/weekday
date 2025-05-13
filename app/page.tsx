@@ -23,10 +23,13 @@ export default async function Page() {
     <HydrateClient>
       <SidebarProvider>
         <AppSidebar session={session} />
-        <SidebarInset>
+        <SidebarInset className="flex-1">
           <div className="flex flex-1 flex-col gap-4 p-2 pt-0">
             <BigCalendar />
           </div>
+        </SidebarInset>
+        <SidebarInset className="w-1/5">
+          <div className="flexflex-1 flex-col gap-4 p-2 pt-0">AI CHAT</div>
         </SidebarInset>
       </SidebarProvider>
     </HydrateClient>

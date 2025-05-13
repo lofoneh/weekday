@@ -2,12 +2,13 @@
 
 import { useMemo } from "react";
 
+import type { CalendarEvent } from "@/components/event-calendar";
+
 import { RiCalendarEventLine } from "@remixicon/react";
 import { addDays, format, isToday } from "date-fns";
 
 import {
   AgendaDaysToShow,
-  CalendarEvent,
   EventItem,
   getAgendaEventsForDay,
 } from "@/components/event-calendar";
@@ -56,35 +57,37 @@ export function AgendaView({
           </p>
         </div>
       ) : (
-        days.map((day) => {
-          const dayEvents = getAgendaEventsForDay(events, day);
+        <div className="h-[calc(100vh-120px)] overflow-y-auto">
+          {days.map((day) => {
+            const dayEvents = getAgendaEventsForDay(events, day);
 
-          if (dayEvents.length === 0) return null;
+            if (dayEvents.length === 0) return null;
 
-          return (
-            <div
-              key={day.toString()}
-              className="border-border/70 relative my-12 border-t"
-            >
-              <span
-                className="bg-background absolute -top-3 left-0 flex h-6 items-center pe-4 text-[10px] uppercase data-today:font-medium sm:pe-4 sm:text-xs"
-                data-today={isToday(day) || undefined}
+            return (
+              <div
+                key={day.toString()}
+                className="border-border/70 relative my-12 border-t"
               >
-                {format(day, "d MMM, EEEE")}
-              </span>
-              <div className="mt-6 space-y-2">
-                {dayEvents.map((event) => (
-                  <EventItem
-                    key={event.id}
-                    onClick={(e) => handleEventClick(event, e)}
-                    event={event}
-                    view="agenda"
-                  />
-                ))}
+                <span
+                  className="bg-background absolute -top-3 left-0 flex h-6 items-center pe-4 text-[10px] uppercase data-today:font-medium sm:pe-4 sm:text-xs"
+                  data-today={isToday(day) || undefined}
+                >
+                  {format(day, "d MMM, EEEE")}
+                </span>
+                <div className="mt-6 space-y-2">
+                  {dayEvents.map((event) => (
+                    <EventItem
+                      key={event.id}
+                      onClick={(e) => handleEventClick(event, e)}
+                      event={event}
+                      view="agenda"
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          );
-        })
+            );
+          })}
+        </div>
       )}
     </div>
   );
