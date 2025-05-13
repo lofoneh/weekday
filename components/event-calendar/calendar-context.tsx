@@ -34,10 +34,10 @@ interface CalendarProviderProps {
 export function CalendarProvider({ children }: CalendarProviderProps) {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
 
-  const [visibleCalendarIds, setVisibleCalendarIds] = useState<string[]>([]);
+  const [hiddenCalendarIds, setHiddenCalendarIds] = useState<string[]>([]);
 
   const toggleCalendarVisibility = (id: string) => {
-    setVisibleCalendarIds((prev) => {
+    setHiddenCalendarIds((prev) => {
       if (prev.includes(id)) {
         return prev.filter((c) => c !== id);
       }
@@ -47,8 +47,7 @@ export function CalendarProvider({ children }: CalendarProviderProps) {
 
   const isCalendarVisible = (id: string | undefined) => {
     if (!id) return true;
-    if (visibleCalendarIds.length === 0) return true;
-    return visibleCalendarIds.includes(id);
+    return !hiddenCalendarIds.includes(id);
   };
 
   const value = {
@@ -56,7 +55,7 @@ export function CalendarProvider({ children }: CalendarProviderProps) {
     isCalendarVisible,
     setCurrentDate,
     toggleCalendarVisibility,
-    visibleCalendarIds,
+    visibleCalendarIds: hiddenCalendarIds, // Keep the same prop name for compatibility
   };
 
   return (
