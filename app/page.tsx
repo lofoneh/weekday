@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { AppSidebar } from "@/components/app-sidebar";
-import BigCalendar from "@/components/big-calendar";
+import { BigCalendar } from "@/components/big-calendar";
+import { ChatSidebar } from "@/components/chat/chat-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { auth } from "@/server/auth";
 import { HydrateClient } from "@/trpc/server";
@@ -28,9 +29,7 @@ export default async function Page() {
             <BigCalendar />
           </div>
         </SidebarInset>
-        <SidebarInset className="w-1/5">
-          <div className="flexflex-1 flex-col gap-4 p-2 pt-0">AI CHAT</div>
-        </SidebarInset>
+        <ChatSidebar />
       </SidebarProvider>
     </HydrateClient>
   );

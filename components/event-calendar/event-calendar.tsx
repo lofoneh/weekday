@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { ChatButton } from "@/components/chat/chat-button";
 import {
   type CalendarEvent,
   type CalendarView,
@@ -371,6 +372,8 @@ export function EventCalendar({
                 </DropdownMenuContent>
               </DropdownMenu>
               <ThemeToggle />
+
+              <ChatButton />
             </div>
           </div>
         </div>

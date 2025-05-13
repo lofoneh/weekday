@@ -8,7 +8,7 @@ import { type CalendarEvent, EventCalendar } from "@/components/event-calendar";
 import { useCalendarContext } from "@/components/event-calendar/calendar-context";
 import { api } from "@/trpc/react";
 
-export default function Component() {
+export function BigCalendar() {
   const { currentDate, isCalendarVisible } = useCalendarContext();
 
   const { timeMax, timeMin } = useMemo(() => {
