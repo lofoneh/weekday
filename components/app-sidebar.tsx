@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import type { Session } from "@/server/auth";
+
 import { RiCheckLine } from "@remixicon/react";
 import Link from "next/link";
 
@@ -23,7 +25,6 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import type { Session } from "@/server/auth";
 
 const data = {
   user: {

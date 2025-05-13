@@ -1,4 +1,5 @@
-import { signOut } from "@/server/auth/auth-client";
+import type { Session } from "@/server/auth";
+
 import {
   RiExpandUpDownLine,
   RiGroupLine,
@@ -6,6 +7,7 @@ import {
   RiSparklingLine,
   RiUserLine,
 } from "@remixicon/react";
+import { redirect } from "next/navigation";
 import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -21,8 +23,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import type { Session } from "@/server/auth";
-import { redirect } from "next/navigation";
+import { signOut } from "@/server/auth/auth-client";
 
 export function NavUser({ user }: { user: Session["user"] }) {
   return (

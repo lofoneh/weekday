@@ -1,8 +1,9 @@
 "use client";
 
+import type { JSX, SVGProps } from "react";
+
 import { Button } from "@/components/ui/button";
 import { signIn } from "@/server/auth/auth-client";
-import type { JSX, SVGProps } from "react";
 
 const GoogleIcon = (
   props: JSX.IntrinsicAttributes & SVGProps<SVGSVGElement>,
@@ -54,8 +55,8 @@ export default function Login() {
           <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
             Don&apos;t have an account?{" "}
             <a
-              href="#"
               className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
+              href="#"
             >
               Sign up
             </a>
