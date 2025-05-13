@@ -58,3 +58,15 @@ export const CalendarListResponseSchema = z.object({
   nextPageToken: z.string().optional().nullable(),
   nextSyncToken: z.string().optional().nullable(),
 });
+
+export const ProcessedCalendarEventSchema = z.object({
+  id: z.string(),
+  allDay: z.boolean(),
+  calendarId: z.string(),
+  color: z.string().optional(),
+  description: z.string().optional(),
+  end: z.string(),
+  location: z.string().optional(),
+  start: z.string(),
+  title: z.string(),
+});

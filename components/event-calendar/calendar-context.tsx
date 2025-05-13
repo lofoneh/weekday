@@ -7,10 +7,10 @@ interface CalendarContextType {
   currentDate: Date;
   setCurrentDate: (date: Date) => void;
 
-  // Etiquette visibility management
-  visibleColors: string[];
-  isColorVisible: (color: string | undefined) => boolean;
-  toggleColorVisibility: (color: string) => void;
+  // Calendar visibility management
+  visibleCalendarIds: string[];
+  isCalendarVisible: (id: string | undefined) => boolean;
+  toggleCalendarVisibility: (id: string) => void;
 }
 
 const CalendarContext = createContext<CalendarContextType | undefined>(
@@ -34,35 +34,29 @@ interface CalendarProviderProps {
 export function CalendarProvider({ children }: CalendarProviderProps) {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
 
-  // Initialize visibleColors based on the default colors
-  const [visibleColors, setVisibleColors] = useState<string[]>(() => {
-    // All default colors are initially active
-    return ["blue", "emerald", "orange", "rose", "violet"];
-  });
+  const [visibleCalendarIds, setVisibleCalendarIds] = useState<string[]>([]);
 
-  // Toggle visibility of a color
-  const toggleColorVisibility = (color: string) => {
-    setVisibleColors((prev) => {
-      if (prev.includes(color)) {
-        return prev.filter((c) => c !== color);
-      } else {
-        return [...prev, color];
+  const toggleCalendarVisibility = (id: string) => {
+    setVisibleCalendarIds((prev) => {
+      if (prev.includes(id)) {
+        return prev.filter((c) => c !== id);
       }
+      return [...prev, id];
     });
   };
 
-  // Check if a color is visible
-  const isColorVisible = (color: string | undefined) => {
-    if (!color) return true; // Events without a color are always visible
-    return visibleColors.includes(color);
+  const isCalendarVisible = (id: string | undefined) => {
+    if (!id) return true;
+    if (visibleCalendarIds.length === 0) return true;
+    return visibleCalendarIds.includes(id);
   };
 
   const value = {
     currentDate,
-    isColorVisible,
+    isCalendarVisible,
     setCurrentDate,
-    toggleColorVisibility,
-    visibleColors,
+    toggleCalendarVisibility,
+    visibleCalendarIds,
   };
 
   return (

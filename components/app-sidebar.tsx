@@ -30,7 +30,7 @@ export function AppSidebar({
   session,
   ...props
 }: React.ComponentProps<typeof Sidebar> & { session: Session }) {
-  const { isColorVisible, toggleColorVisibility } = useCalendarContext();
+  const { isCalendarVisible, toggleCalendarVisibility } = useCalendarContext();
   const defaultColors = ["blue", "emerald", "orange", "rose", "violet"];
 
   const { data: calendars } = api.calendar.getAllCalendarList.useQuery();
@@ -89,8 +89,10 @@ export function AppSidebar({
                           <Checkbox
                             id={calendar.id}
                             className="peer sr-only"
-                            checked={isColorVisible(color)}
-                            onCheckedChange={() => toggleColorVisibility(color)}
+                            checked={isCalendarVisible(calendar.id)}
+                            onCheckedChange={() =>
+                              toggleCalendarVisibility(calendar.id)
+                            }
                           />
                           <RiCheckLine
                             size={16}
@@ -105,12 +107,12 @@ export function AppSidebar({
                           </label>
                         </span>
                         <span
-                          className="size-1.5 rounded-full bg-(--event-color)"
-                          style={
-                            {
-                              "--event-color": `var(--color-${color}-400)`,
-                            } as React.CSSProperties
-                          }
+                          className="size-1.5 rounded-full"
+                          style={{
+                            backgroundColor:
+                              calendar.backgroundColor ??
+                              `var(--color-${color}-400)`,
+                          }}
                         ></span>
                       </span>
                     </SidebarMenuButton>

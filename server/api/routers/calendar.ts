@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import {
   CalendarListResponseSchema,
+  ProcessedCalendarEventSchema,
   ProcessedCalendarListEntrySchema,
 } from "@/server/api/routers/schema";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
@@ -115,6 +116,182 @@ export const calendarRouter = createTRPCRouter({
         return processedItems;
       } catch (error) {
         console.error("Error fetching or parsing calendar list:", error);
+        throw error;
+      }
+    }),
+
+  getEvents: protectedProcedure
+    .input(
+      z
+        .object({
+          calendarIds: z.array(z.string()).optional(),
+          timeMax: z.string().optional(),
+          timeMin: z.string().optional(),
+        })
+        .optional(),
+    )
+    .output(z.array(ProcessedCalendarEventSchema))
+    .query(async ({ ctx, input }) => {
+      const account = await ctx.db.account.findFirst({
+        select: {
+          id: true,
+          accessToken: true,
+          refreshToken: true,
+        },
+        where: {
+          providerId: "google",
+          userId: ctx.session.user.id,
+        },
+      });
+
+      if (!account?.accessToken) {
+        throw new Error("No access token found");
+      }
+
+      let accessToken = account.accessToken;
+
+      const headers = new Headers();
+      headers.append("Authorization", `Bearer ${accessToken}`);
+      headers.append("Accept", "application/json");
+
+      const requestOptions: RequestInit = {
+        cache: "no-cache",
+        headers,
+        method: "GET",
+        mode: "cors",
+      };
+
+      let calendarsToFetch: { id: string; backgroundColor?: string }[] = [];
+
+      try {
+        let calListResponse = await fetch(
+          GOOGLE_CALENDAR_LIST_API_URL,
+          requestOptions,
+        );
+
+        if (calListResponse.status === 401 && account.refreshToken) {
+          const refreshedAccount = await authInstance.api.refreshToken({
+            body: {
+              accountId: account.id,
+              providerId: "google",
+              userId: ctx.session.user.id,
+            },
+          });
+
+          if (refreshedAccount?.accessToken) {
+            accessToken = refreshedAccount.accessToken;
+            headers.set("Authorization", `Bearer ${accessToken}`);
+            calListResponse = await fetch(
+              GOOGLE_CALENDAR_LIST_API_URL,
+              requestOptions,
+            );
+          }
+        }
+
+        if (!calListResponse.ok) {
+          const error = await calListResponse.json();
+          console.error("Error fetching calendar list:", error);
+          throw new Error(
+            `HTTP error! status: ${calListResponse.status} - ${calListResponse.statusText}`,
+          );
+        }
+
+        const calListData = await calListResponse.json();
+        const parsedCalList = CalendarListResponseSchema.parse(calListData);
+
+        calendarsToFetch = parsedCalList.items.map((item) => ({
+          id: item.id,
+          backgroundColor: item.backgroundColor,
+        }));
+
+        if (input?.calendarIds?.length) {
+          calendarsToFetch = calendarsToFetch.filter((c) =>
+            input.calendarIds!.includes(c.id),
+          );
+        }
+
+        const now = new Date();
+        const defaultTimeMin = new Date(now.getFullYear(), now.getMonth(), 1); // first day of current month
+        const defaultTimeMax = new Date(
+          now.getFullYear(),
+          now.getMonth() + 1,
+          0,
+          23,
+          59,
+          59,
+        );
+
+        const timeMinISO = input?.timeMin ?? defaultTimeMin.toISOString();
+        const timeMaxISO = input?.timeMax ?? defaultTimeMax.toISOString();
+
+        const events: Array<z.infer<typeof ProcessedCalendarEventSchema>> = [];
+
+        for (const calendar of calendarsToFetch) {
+          const params = new URLSearchParams({
+            maxResults: "2500",
+            orderBy: "startTime",
+            singleEvents: "true",
+            timeMax: timeMaxISO,
+            timeMin: timeMinISO,
+          });
+
+          const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendar.id)}/events?${params.toString()}`;
+
+          let evResponse = await fetch(url, requestOptions);
+
+          if (evResponse.status === 401 && account.refreshToken) {
+            const refreshedAccount = await authInstance.api.refreshToken({
+              body: {
+                accountId: account.id,
+                providerId: "google",
+                userId: ctx.session.user.id,
+              },
+            });
+
+            if (refreshedAccount?.accessToken) {
+              accessToken = refreshedAccount.accessToken;
+              headers.set("Authorization", `Bearer ${accessToken}`);
+              evResponse = await fetch(url, requestOptions);
+            }
+          }
+
+          if (!evResponse.ok) {
+            const error = await evResponse.json();
+            console.error("Error fetching events:", error);
+            continue;
+          }
+
+          const evData = await evResponse.json();
+          const items = (evData.items ?? []) as any[];
+
+          for (const item of items) {
+            const isAllDay = !!item.start?.date;
+            const startStr = (item.start?.dateTime ?? item.start?.date) as
+              | string
+              | undefined;
+            const endStr = (item.end?.dateTime ?? item.end?.date) as
+              | string
+              | undefined;
+
+            if (!startStr || !endStr) continue;
+
+            events.push({
+              id: item.id,
+              allDay: isAllDay,
+              calendarId: calendar.id,
+              color: calendar.backgroundColor ?? undefined,
+              description: item.description ?? undefined,
+              end: endStr,
+              location: item.location ?? undefined,
+              start: startStr,
+              title: item.summary ?? "(No title)",
+            });
+          }
+        }
+
+        return events;
+      } catch (error) {
+        console.error("Error fetching calendar events:", error);
         throw error;
       }
     }),
