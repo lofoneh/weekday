@@ -51,7 +51,6 @@ export function BigCalendar() {
       onEventDelete={handleEventDelete}
       onEventUpdate={handleEventUpdate}
       events={visibleEvents}
-      initialView="week"
     />
   );
 }

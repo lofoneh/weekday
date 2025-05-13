@@ -63,7 +63,7 @@ export const ProcessedCalendarEventSchema = z.object({
   id: z.string(),
   allDay: z.boolean(),
   calendarId: z.string(),
-  color: z.string().optional(),
+  color: z.string(),
   description: z.string().optional(),
   end: z.date(),
   location: z.string().optional(),

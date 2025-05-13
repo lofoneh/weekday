@@ -312,7 +312,7 @@ export const calendarRouter = createTRPCRouter({
                 id: item.id,
                 allDay: isAllDay,
                 calendarId: calendar.id,
-                color: eventColor,
+                color: eventColor || "blue",
                 description: item.description ?? undefined,
                 end: new Date(endStr),
                 location: item.location ?? undefined,

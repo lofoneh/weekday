@@ -62,7 +62,7 @@ export interface EventCalendarProps {
 export function EventCalendar({
   className,
   events = [],
-  initialView = "month",
+  initialView = "week",
   onEventAdd,
   onEventDelete,
   onEventUpdate,
