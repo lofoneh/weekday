@@ -31,8 +31,6 @@ export function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar> & { session: Session }) {
   const { isCalendarVisible, toggleCalendarVisibility } = useCalendarContext();
-  const defaultColors = ["blue", "emerald", "orange", "rose", "violet"];
-
   const { data: calendars } = api.calendar.getAllCalendarList.useQuery();
 
   return (
@@ -75,9 +73,6 @@ export function AppSidebar({
           <SidebarGroupContent>
             <SidebarMenu>
               {calendars?.map((calendar, index) => {
-                const color =
-                  defaultColors[index % defaultColors.length] ?? "gray";
-
                 return (
                   <SidebarMenuItem key={calendar.id}>
                     <SidebarMenuButton
@@ -109,9 +104,7 @@ export function AppSidebar({
                         <span
                           className="size-1.5 rounded-full"
                           style={{
-                            backgroundColor:
-                              calendar.backgroundColor ??
-                              `var(--color-${color}-400)`,
+                            backgroundColor: calendar.backgroundColor,
                           }}
                         ></span>
                       </span>

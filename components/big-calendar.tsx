@@ -20,30 +20,14 @@ export function BigCalendar() {
     };
   }, [currentDate]);
 
-  const { data: fetchedEvents } = api.calendar.getEvents.useQuery({
+  const { data: events } = api.calendar.getEvents.useQuery({
     timeMax,
     timeMin,
   });
 
-  const events = useMemo(() => {
-    if (!fetchedEvents) return [];
-
-    return fetchedEvents.map((ev) => ({
-      id: ev.id,
-      allDay: ev.allDay,
-      calendarId: ev.calendarId,
-      color: undefined,
-      description: ev.description ?? undefined,
-      end: new Date(ev.end),
-      location: ev.location ?? undefined,
-      start: new Date(ev.start),
-      title: ev.title,
-    }));
-  }, [fetchedEvents]);
-
   // Filter events based on visible colors
   const visibleEvents = useMemo(() => {
-    return events.filter((event) => isCalendarVisible(event.calendarId));
+    return events?.filter((event) => isCalendarVisible(event.calendarId));
   }, [events, isCalendarVisible]);
 
   const handleEventAdd = (event: CalendarEvent) => {

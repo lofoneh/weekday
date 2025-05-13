@@ -4,7 +4,7 @@ export const EventHeight = 24;
 export const EventGap = 4;
 
 // Height of hour cells in week and day views - controls the scale of time display
-export const WeekCellsHeight = 50;
+export const WeekCellsHeight = 48;
 
 // Number of days to show in the agenda view
 export const AgendaDaysToShow = 30;

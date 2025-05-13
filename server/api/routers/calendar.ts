@@ -1,15 +1,16 @@
 import { z } from "zod";
 
 import {
+  GOOGLE_CALENDAR_COLORS,
+  GOOGLE_CALENDAR_LIST_API_URL,
+} from "@/lib/constants";
+import {
   CalendarListResponseSchema,
   ProcessedCalendarEventSchema,
   ProcessedCalendarListEntrySchema,
 } from "@/server/api/routers/schema";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { authInstance } from "@/server/auth";
-
-const GOOGLE_CALENDAR_LIST_API_URL =
-  "https://www.googleapis.com/calendar/v3/users/me/calendarList";
 
 export const calendarRouter = createTRPCRouter({
   getAllCalendarList: protectedProcedure
@@ -301,15 +302,21 @@ export const calendarRouter = createTRPCRouter({
 
               if (!startStr || !endStr) continue;
 
+              let eventColor = undefined;
+              const colorId = item.colorId as string | undefined;
+              if (colorId && GOOGLE_CALENDAR_COLORS[colorId]) {
+                eventColor = GOOGLE_CALENDAR_COLORS[colorId].color;
+              }
+
               calendarEvents.push({
                 id: item.id,
                 allDay: isAllDay,
                 calendarId: calendar.id,
-                color: calendar.backgroundColor ?? undefined,
+                color: eventColor,
                 description: item.description ?? undefined,
-                end: endStr,
+                end: new Date(endStr),
                 location: item.location ?? undefined,
-                start: startStr,
+                start: new Date(startStr),
                 title: item.summary ?? "(No title)",
               });
             }

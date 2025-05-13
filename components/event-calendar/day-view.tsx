@@ -112,7 +112,7 @@ export function DayView({
     });
 
     // Track columns for overlapping events
-    const columns: { end: Date; event: CalendarEvent; }[][] = [];
+    const columns: { end: Date; event: CalendarEvent }[][] = [];
 
     sortedEvents.forEach((event) => {
       const eventStart = new Date(event.start);

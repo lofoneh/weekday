@@ -5,7 +5,7 @@ export interface CalendarEvent {
   title: string;
   allDay?: boolean;
   calendarId?: string;
-  color?: EventColor;
+  color?: EventColor | string;
   description?: string;
   label?: string;
   location?: string;
@@ -13,4 +13,15 @@ export interface CalendarEvent {
 
 export type CalendarView = "agenda" | "day" | "month" | "week";
 
-export type EventColor = "blue" | "emerald" | "orange" | "rose" | "violet";
+export type EventColor =
+  | "blue"
+  | "cyan"
+  | "emerald"
+  | "gray"
+  | "green"
+  | "indigo"
+  | "orange"
+  | "red"
+  | "rose"
+  | "violet"
+  | "yellow";

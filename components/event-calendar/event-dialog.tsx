@@ -83,7 +83,7 @@ export function EventDialog({
 
       setFormState({
         allDay: event.allDay || false,
-        color: (event.color as EventColor) || "sky",
+        color: (event.color as EventColor) || "blue",
         description: event.description || "",
         endDate: end,
         endTime: formatTimeForInput(end),
