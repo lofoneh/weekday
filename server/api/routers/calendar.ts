@@ -224,9 +224,7 @@ export const calendarRouter = createTRPCRouter({
         const timeMinISO = input?.timeMin ?? defaultTimeMin.toISOString();
         const timeMaxISO = input?.timeMax ?? defaultTimeMax.toISOString();
 
-        const events: Array<z.infer<typeof ProcessedCalendarEventSchema>> = [];
-
-        for (const calendar of calendarsToFetch) {
+        const fetchPromises = calendarsToFetch.map(async (calendar) => {
           const params = new URLSearchParams({
             maxResults: "2500",
             orderBy: "startTime",
@@ -237,61 +235,97 @@ export const calendarRouter = createTRPCRouter({
 
           const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendar.id)}/events?${params.toString()}`;
 
-          let evResponse = await fetch(url, requestOptions);
+          let currentAccessToken = accessToken;
+          const currentHeaders = new Headers(headers);
 
-          if (evResponse.status === 401 && account.refreshToken) {
-            const refreshedAccount = await authInstance.api.refreshToken({
-              body: {
-                accountId: account.id,
-                providerId: "google",
-                userId: ctx.session.user.id,
-              },
+          try {
+            let evResponse = await fetch(url, {
+              ...requestOptions,
+              headers: currentHeaders,
             });
 
-            if (refreshedAccount?.accessToken) {
-              accessToken = refreshedAccount.accessToken;
-              headers.set("Authorization", `Bearer ${accessToken}`);
-              const retryRequestOptions = {
-                ...requestOptions,
-                headers,
-              };
-              evResponse = await fetch(url, retryRequestOptions);
+            if (evResponse.status === 401 && account.refreshToken) {
+              console.log(
+                `Token expired for calendar ${calendar.id}, attempting refresh...`,
+              );
+              const refreshedAccount = await authInstance.api.refreshToken({
+                body: {
+                  accountId: account.id,
+                  providerId: "google",
+                  userId: ctx.session.user.id,
+                },
+              });
+
+              if (refreshedAccount?.accessToken) {
+                currentAccessToken = refreshedAccount.accessToken;
+                accessToken = currentAccessToken;
+                currentHeaders.set(
+                  "Authorization",
+                  `Bearer ${currentAccessToken}`,
+                );
+
+                evResponse = await fetch(url, {
+                  ...requestOptions,
+                  headers: currentHeaders,
+                });
+              } else {
+                console.error(
+                  `Failed to refresh token for calendar ${calendar.id}`,
+                );
+                return [];
+              }
             }
+
+            if (!evResponse.ok) {
+              const error = await evResponse.text();
+              console.error(
+                `Error fetching events for calendar ${calendar.id}: ${evResponse.status} - ${evResponse.statusText}, Body: ${error}`,
+              );
+              return [];
+            }
+
+            const evData = await evResponse.json();
+            const items = (evData.items ?? []) as any[];
+            const calendarEvents: Array<
+              z.infer<typeof ProcessedCalendarEventSchema>
+            > = [];
+
+            for (const item of items) {
+              const isAllDay = !!item.start?.date;
+              const startStr = (item.start?.dateTime ?? item.start?.date) as
+                | string
+                | undefined;
+              const endStr = (item.end?.dateTime ?? item.end?.date) as
+                | string
+                | undefined;
+
+              if (!startStr || !endStr) continue;
+
+              calendarEvents.push({
+                id: item.id,
+                allDay: isAllDay,
+                calendarId: calendar.id,
+                color: calendar.backgroundColor ?? undefined,
+                description: item.description ?? undefined,
+                end: endStr,
+                location: item.location ?? undefined,
+                start: startStr,
+                title: item.summary ?? "(No title)",
+              });
+            }
+            return calendarEvents;
+          } catch (fetchError) {
+            console.error(
+              `Unexpected error fetching events for calendar ${calendar.id}:`,
+              fetchError,
+            );
+            return [];
           }
+        });
 
-          if (!evResponse.ok) {
-            const error = await evResponse.json();
-            console.error("Error fetching events:", error);
-            continue;
-          }
+        const results = await Promise.all(fetchPromises);
 
-          const evData = await evResponse.json();
-          const items = (evData.items ?? []) as any[];
-
-          for (const item of items) {
-            const isAllDay = !!item.start?.date;
-            const startStr = (item.start?.dateTime ?? item.start?.date) as
-              | string
-              | undefined;
-            const endStr = (item.end?.dateTime ?? item.end?.date) as
-              | string
-              | undefined;
-
-            if (!startStr || !endStr) continue;
-
-            events.push({
-              id: item.id,
-              allDay: isAllDay,
-              calendarId: calendar.id,
-              color: calendar.backgroundColor ?? undefined,
-              description: item.description ?? undefined,
-              end: endStr,
-              location: item.location ?? undefined,
-              start: startStr,
-              title: item.summary ?? "(No title)",
-            });
-          }
-        }
+        const events = results.flat();
 
         return events;
       } catch (error) {
