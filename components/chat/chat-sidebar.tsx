@@ -15,6 +15,7 @@ import { Message, MessageContent } from "@/components/prompt-kit/message";
 import { ScrollButton } from "@/components/prompt-kit/scroll-button";
 import { Button } from "@/components/ui/button";
 import { useChat as useChatProvider } from "@/providers/chat-provider";
+import { api } from "@/trpc/react";
 
 import type { CalendarEvent } from "../event-calendar/types";
 
@@ -74,6 +75,7 @@ const formatEventTimeDisplay = (
 
 export function ChatSidebar() {
   const { isChatOpen } = useChatProvider();
+  const utils = api.useUtils();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -83,6 +85,24 @@ export function ChatSidebar() {
     useChat({
       id: chatId,
       api: "/api/ai/chat",
+
+      onFinish: (message) => {
+        if (message.parts) {
+          for (const part of message.parts) {
+            if (part.type === "tool-invocation") {
+              const toolInvocation = part.toolInvocation as ToolInvocation;
+              if (
+                toolInvocation.toolName === "createEvent" &&
+                toolInvocation.state === "result" &&
+                !toolInvocation.result.error
+              ) {
+                utils.calendar.getEvents.invalidate();
+                break;
+              }
+            }
+          }
+        }
+      },
     } satisfies UseChatOptions);
 
   const handleFormSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
@@ -351,10 +371,7 @@ export function ChatSidebar() {
 
                       if (toolInvocation.toolName === "createEvent") {
                         if (toolInvocation.state === "call") {
-                          // Display details about the event being created
                           const eventDetails = toolInvocation.args;
-                          const startDate = new Date(eventDetails.startTime);
-                          const endDate = new Date(eventDetails.endTime);
 
                           return (
                             <div
