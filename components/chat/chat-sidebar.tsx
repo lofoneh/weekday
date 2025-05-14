@@ -6,7 +6,7 @@ import type { ToolInvocation, Message as UIMessage } from "ai";
 
 import { type UseChatOptions, useChat } from "@ai-sdk/react";
 import { format, isToday, startOfDay } from "date-fns";
-import { CalendarDays, PencilRuler } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import { nanoid } from "nanoid";
 
 import { ChatContainer } from "@/components/prompt-kit/chat-container";
@@ -19,7 +19,6 @@ import { useChat as useChatProvider } from "@/providers/chat-provider";
 import type { CalendarEvent } from "../event-calendar/types";
 
 import { EventItem } from "../event-calendar/event-item";
-import { CalendarDaysIcon } from "../ui/calendar-days";
 import { ChatPromptInput } from "./chat-prompt-input";
 
 const groupEventsByDate = (
@@ -57,6 +56,20 @@ const formatPreciseUpcomingStatusText = (totalMinutes: number): string => {
   }
 
   return `Starts in ${parts.join(" ")}`;
+};
+
+const formatEventTimeDisplay = (
+  dateString: string | null | undefined,
+): string => {
+  if (!dateString) {
+    return "";
+  }
+  const date = new Date(dateString);
+  const minutes = date.getMinutes();
+  if (minutes === 0) {
+    return format(date, "ha");
+  }
+  return format(date, "h:mma");
 };
 
 export function ChatSidebar() {
@@ -147,9 +160,10 @@ export function ChatSidebar() {
                               key={toolCallId}
                               className="flex items-center gap-2 p-2"
                             >
-                              <CalendarDaysIcon className="h-4 w-4" />
-
-                              <p>Getting events...</p>
+                              <CalendarDays className="h-4 w-4 text-gray-500" />
+                              <p className="font-medium text-gray-700 dark:text-gray-300">
+                                Getting events...
+                              </p>
                             </div>
                           );
                         }
@@ -164,7 +178,7 @@ export function ChatSidebar() {
                           return (
                             <div
                               key={toolCallId}
-                              className="flex flex-col gap-2 p-3"
+                              className="flex flex-col gap-2 px-2 py-3"
                             >
                               <div className="flex items-center gap-2">
                                 <CalendarDays className="h-4 w-4 text-gray-500" />
@@ -177,17 +191,45 @@ export function ChatSidebar() {
                                 uniqueDates.length === 1 ? (
                                   <div className="mt-2 flex flex-col space-y-2">
                                     {events.map((event: CalendarEvent) => (
-                                      <EventItem
-                                        key={event.id || nanoid()}
-                                        onClick={() =>
-                                          console.log(
-                                            "Event clicked in chat:",
-                                            event,
-                                          )
-                                        }
-                                        event={event}
-                                        view="agenda"
-                                      />
+                                      <div
+                                        key={event.id}
+                                        className="flex h-full gap-2"
+                                      >
+                                        {!event.allDay &&
+                                          (event.start || event.end) && (
+                                            <div className="flex w-12 flex-shrink-0 items-end justify-between py-1 text-xs">
+                                              <p>
+                                                {event.start
+                                                  ? formatEventTimeDisplay(
+                                                      new Date(
+                                                        event.start,
+                                                      ).toISOString(),
+                                                    )
+                                                  : ""}
+                                              </p>
+                                              <p>
+                                                {event.end
+                                                  ? formatEventTimeDisplay(
+                                                      new Date(
+                                                        event.end,
+                                                      ).toISOString(),
+                                                    )
+                                                  : ""}
+                                              </p>
+                                            </div>
+                                          )}
+
+                                        <EventItem
+                                          onClick={() =>
+                                            console.log(
+                                              "Event clicked in chat:",
+                                              event,
+                                            )
+                                          }
+                                          event={event}
+                                          view="agenda"
+                                        />
+                                      </div>
                                     ))}
                                   </div>
                                 ) : (
@@ -251,17 +293,46 @@ export function ChatSidebar() {
                                           <div className="mt-4 space-y-2">
                                             {dayEvents.map(
                                               (event: CalendarEvent) => (
-                                                <EventItem
-                                                  key={event.id || nanoid()}
-                                                  onClick={() =>
-                                                    console.log(
-                                                      "Event clicked in chat:",
-                                                      event,
-                                                    )
-                                                  }
-                                                  event={event}
-                                                  view="agenda"
-                                                />
+                                                <div
+                                                  key={event.id}
+                                                  className="flex h-full gap-2"
+                                                >
+                                                  {!event.allDay &&
+                                                    (event.start ||
+                                                      event.end) && (
+                                                      <div className="flex w-12 flex-shrink-0 flex-col items-end justify-between py-1 text-xs">
+                                                        <p>
+                                                          {event.start
+                                                            ? formatEventTimeDisplay(
+                                                                new Date(
+                                                                  event.start,
+                                                                ).toISOString(),
+                                                              )
+                                                            : ""}
+                                                        </p>
+                                                        <p>
+                                                          {event.end
+                                                            ? formatEventTimeDisplay(
+                                                                new Date(
+                                                                  event.end,
+                                                                ).toISOString(),
+                                                              )
+                                                            : ""}
+                                                        </p>
+                                                      </div>
+                                                    )}
+                                                  <EventItem
+                                                    key={event.id || nanoid()}
+                                                    onClick={() =>
+                                                      console.log(
+                                                        "Event clicked in chat:",
+                                                        event,
+                                                      )
+                                                    }
+                                                    event={event}
+                                                    view="agenda"
+                                                  />
+                                                </div>
                                               ),
                                             )}
                                           </div>
@@ -280,20 +351,6 @@ export function ChatSidebar() {
                         }
                       }
 
-                      if (toolInvocation.toolName === "editDocument") {
-                        return (
-                          <div
-                            key={toolInvocation.toolCallId}
-                            className="bg-muted text-muted-foreground flex items-center gap-2 rounded p-2"
-                          >
-                            <PencilRuler className="h-4 w-4 flex-shrink-0" />
-                            <p className="text-sm italic">
-                              Editing document...
-                            </p>
-                          </div>
-                        );
-                      }
-
                       if (toolInvocation.toolName === "getNextUpcomingEvent") {
                         if (toolInvocation.state === "call") {
                           return (
@@ -301,8 +358,10 @@ export function ChatSidebar() {
                               key={toolCallId}
                               className="flex items-center gap-2 p-2"
                             >
-                              <CalendarDaysIcon className="h-4 w-4" />
-                              <p>Getting next upcoming event...</p>
+                              <CalendarDays className="h-4 w-4 text-gray-500" />
+                              <p className="font-medium text-gray-700 dark:text-gray-300">
+                                Getting next upcoming event...
+                              </p>
                             </div>
                           );
                         }
@@ -322,7 +381,7 @@ export function ChatSidebar() {
                             return (
                               <div
                                 key={toolCallId}
-                                className="flex flex-col gap-2 p-3"
+                                className="flex flex-col gap-2 px-2 py-3"
                               >
                                 <div className="flex items-center gap-2">
                                   <CalendarDays className="h-4 w-4 text-gray-500" />
@@ -356,13 +415,36 @@ export function ChatSidebar() {
                                   Next Upcoming Event
                                 </p>
                               </div>
-                              <EventItem
-                                onClick={() =>
-                                  console.log("Event clicked in chat:", event)
-                                }
-                                event={event}
-                                view="agenda"
-                              />
+                              <div className="flex h-full gap-2">
+                                {!event.allDay &&
+                                  (event.start || event.end) && (
+                                    <div className="flex w-12 flex-shrink-0 flex-col items-end justify-between py-1 text-xs">
+                                      <p>
+                                        {event.start
+                                          ? formatEventTimeDisplay(
+                                              new Date(
+                                                event.start,
+                                              ).toISOString(),
+                                            )
+                                          : ""}
+                                      </p>
+                                      <p>
+                                        {event.end
+                                          ? formatEventTimeDisplay(
+                                              new Date(event.end).toISOString(),
+                                            )
+                                          : ""}
+                                      </p>
+                                    </div>
+                                  )}
+                                <EventItem
+                                  onClick={() =>
+                                    console.log("Event clicked in chat:", event)
+                                  }
+                                  event={event}
+                                  view="agenda"
+                                />
+                              </div>
                               {statusText && (
                                 <p className="text-sm text-gray-600 dark:text-gray-400">
                                   {statusText}
