@@ -5,7 +5,13 @@ import { useRef, useState } from "react";
 import type { ToolInvocation, Message as UIMessage } from "ai";
 
 import { type UseChatOptions, useChat } from "@ai-sdk/react";
-import { format, isToday, startOfDay } from "date-fns";
+import {
+  addMinutes,
+  format,
+  formatDistanceToNowStrict,
+  isToday,
+  startOfDay,
+} from "date-fns";
 import { CalendarDays, PencilRuler } from "lucide-react";
 import { nanoid } from "nanoid";
 
@@ -269,6 +275,90 @@ export function ChatSidebar() {
                             </p>
                           </div>
                         );
+                      }
+
+                      if (toolInvocation.toolName === "getNextUpcomingEvent") {
+                        if (toolInvocation.state === "call") {
+                          return (
+                            <div
+                              key={toolCallId}
+                              className="flex items-center gap-2 p-2"
+                            >
+                              <CalendarDaysIcon className="h-4 w-4" />
+                              <p>Getting next upcoming event...</p>
+                            </div>
+                          );
+                        }
+
+                        if (toolInvocation.state === "result") {
+                          const {
+                            event,
+                            minutesToStart,
+                            status: eventStatus,
+                          } = toolInvocation.result as {
+                            event: CalendarEvent;
+                            minutesToStart: number;
+                            status: string;
+                          };
+
+                          if (!event) {
+                            return (
+                              <div
+                                key={toolCallId}
+                                className="flex flex-col gap-2 p-3"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <CalendarDays className="h-4 w-4 text-gray-500" />
+                                  <p className="font-medium text-gray-700 dark:text-gray-300">
+                                    Next Upcoming Event
+                                  </p>
+                                </div>
+                                <p className="pl-6 text-sm text-gray-500 dark:text-gray-400">
+                                  No upcoming event found.
+                                </p>
+                              </div>
+                            );
+                          }
+
+                          let statusText = "";
+                          if (eventStatus === "upcoming") {
+                            if (minutesToStart < 0) {
+                              statusText = "Starting now";
+                            } else {
+                              const now = new Date();
+                              const startTime = addMinutes(now, minutesToStart);
+                              statusText = `Starts ${formatDistanceToNowStrict(startTime, { addSuffix: true })}`;
+                            }
+                          } else if (eventStatus === "ongoing") {
+                            statusText = "Ongoing";
+                          }
+
+                          return (
+                            <div
+                              key={toolCallId}
+                              className="flex flex-col gap-3 px-2 py-3"
+                            >
+                              <div className="flex items-center gap-2">
+                                <CalendarDays className="h-4 w-4 text-gray-500" />
+                                <p className="font-medium text-gray-700 dark:text-gray-300">
+                                  Next Upcoming Event
+                                </p>
+                              </div>
+                              <EventItem
+                                onClick={() =>
+                                  console.log("Event clicked in chat:", event)
+                                }
+                                event={event}
+                                view="agenda"
+                              />
+                              {statusText && (
+                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                  {statusText}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        }
                       }
                     }
                     return null;
