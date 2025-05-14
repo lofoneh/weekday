@@ -123,8 +123,6 @@ export function ChatSidebar() {
           {messages.map((message: UIMessage) => {
             const isAssistant = message.role === "assistant";
 
-            console.log(message);
-
             return (
               <Message key={message.id}>
                 <div className="flex-1 space-y-2">
@@ -197,7 +195,7 @@ export function ChatSidebar() {
                                       >
                                         {!event.allDay &&
                                           (event.start || event.end) && (
-                                            <div className="flex w-12 flex-shrink-0 items-end justify-between py-1 text-xs">
+                                            <div className="flex w-12 flex-shrink-0 flex-col items-end justify-between py-1 text-xs">
                                               <p>
                                                 {event.start
                                                   ? formatEventTimeDisplay(

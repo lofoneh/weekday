@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 
 import {
@@ -22,12 +23,29 @@ export const calendarRouter = createTRPCRouter({
     .input(
       z.object({
         calendarId: z.string(),
+        createMeetLink: z.boolean().optional().default(false),
         event: z.object({
-          allDay: z.boolean().optional(),
+          allDay: z.boolean().optional().default(false),
+          attendees: z
+            .array(z.object({ email: z.string().email() }))
+            .optional(),
           color: z.string().optional(),
           description: z.string().optional(),
           end: z.date(),
           location: z.string().optional(),
+          reminders: z
+            .object({
+              overrides: z
+                .array(
+                  z.object({
+                    method: z.enum(["email", "popup"]),
+                    minutes: z.number().int().positive(),
+                  }),
+                )
+                .optional(),
+              useDefault: z.boolean().optional(),
+            })
+            .optional(),
           start: z.date(),
           title: z.string(),
         }),
@@ -42,8 +60,7 @@ export const calendarRouter = createTRPCRouter({
       const headers = createHeaders(account.accessToken);
       headers.append("Content-Type", "application/json");
 
-      // Prepare event data
-      const eventData = prepareEventData({
+      const baseEventData = prepareEventData({
         allDay: input.event.allDay,
         color: input.event.color,
         description: input.event.description,
@@ -53,16 +70,45 @@ export const calendarRouter = createTRPCRouter({
         title: input.event.title,
       });
 
-      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(input.calendarId)}/events`;
+      const finalEventPayload: any = { ...baseEventData };
+
+      if (input.event.attendees && input.event.attendees.length > 0) {
+        finalEventPayload.attendees = input.event.attendees;
+      }
+
+      if (input.event.reminders) {
+        finalEventPayload.reminders = input.event.reminders;
+      }
+
+      if (input.createMeetLink) {
+        finalEventPayload.conferenceData = {
+          createRequest: { requestId: uuidv4() },
+        };
+      }
+
+      const queryParams = new URLSearchParams();
+      if (input.createMeetLink) {
+        queryParams.append("conferenceDataVersion", "1");
+      }
+
+      if (input.event.attendees && input.event.attendees.length > 0) {
+        queryParams.append("sendUpdates", "all");
+      }
+
+      const calendarApiBaseUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(input.calendarId)}/events`;
+      const finalUrl = queryParams.toString()
+        ? `${calendarApiBaseUrl}?${queryParams.toString()}`
+        : calendarApiBaseUrl;
+
       const options = createRequestOptions(
         headers,
         "POST",
-        JSON.stringify(eventData),
+        JSON.stringify(finalEventPayload),
       );
 
       try {
         const response = await executeRequest(
-          url,
+          finalUrl,
           options,
           account,
           ctx.session.user.id,
@@ -229,20 +275,17 @@ export const calendarRouter = createTRPCRouter({
         const calListData = await calListResponse.json();
         const parsedCalList = CalendarListResponseSchema.parse(calListData);
 
-        // Determine which calendars to fetch events from
         let calendarsToFetch = parsedCalList.items.map((item) => ({
           id: item.id,
           backgroundColor: item.backgroundColor,
         }));
 
-        // Filter by calendars specified in input, if any
         if (input?.calendarIds?.length) {
           calendarsToFetch = calendarsToFetch.filter((c) =>
             input.calendarIds!.includes(c.id),
           );
         }
 
-        // Determine time range
         const now = new Date();
         const defaultTimeMin = new Date(now.getFullYear(), now.getMonth(), 1); // first day of current month
         const defaultTimeMax = new Date(
