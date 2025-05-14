@@ -1,5 +1,9 @@
 export const GOOGLE_CALENDAR_LIST_API_URL =
   "https://www.googleapis.com/calendar/v3/users/me/calendarList";
+
+export const GOOGLE_FREEBUSY_API_URL =
+  "https://www.googleapis.com/calendar/v3/freeBusy";
+
 export const GOOGLE_CALENDAR_COLORS: Record<string, { color: string }> = {
   "1": { color: "blue" },
   "2": { color: "emerald" },

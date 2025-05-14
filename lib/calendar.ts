@@ -235,3 +235,75 @@ export function prepareEventData(
 
   return eventData;
 }
+
+// Schemas for Google FreeBusy API response
+
+// Helper function to merge and sort busy intervals
+export function mergeAndSortBusyIntervals(
+  rawIntervals: Array<{ end: string; start: string }>,
+): Array<{ end: Date; start: Date }> {
+  if (!rawIntervals || rawIntervals.length === 0) {
+    return [];
+  }
+
+  const intervals = rawIntervals.map((p) => ({
+    end: new Date(p.end),
+    start: new Date(p.start),
+  }));
+
+  intervals.sort((a, b) => a.start.getTime() - b.start.getTime());
+
+  const mergedIntervals: Array<{ end: Date; start: Date }> = [];
+  if (intervals.length === 0) return mergedIntervals;
+
+  mergedIntervals.push({ ...intervals[0]! });
+
+  for (let i = 1; i < intervals.length; i++) {
+    const currentInterval = intervals[i]!;
+    const lastMergedInterval = mergedIntervals[mergedIntervals.length - 1]!;
+
+    if (currentInterval.start.getTime() <= lastMergedInterval.end.getTime()) {
+      // Overlapping or adjacent interval, merge them
+      if (currentInterval.end.getTime() > lastMergedInterval.end.getTime()) {
+        lastMergedInterval.end = currentInterval.end;
+      }
+    } else {
+      // Non-overlapping interval, add it to the list
+      mergedIntervals.push({ ...currentInterval });
+    }
+  }
+  return mergedIntervals;
+}
+
+// Helper function to calculate free slots from merged busy intervals
+export function calculateFreeSlotsFromBusy(
+  busyIntervals: Array<{ end: Date; start: Date }>,
+  queryStartTime: Date,
+  queryEndTime: Date,
+): Array<{ end: Date; start: Date }> {
+  const freeSlots: Array<{ end: Date; start: Date }> = [];
+  let currentFreeStart = queryStartTime;
+
+  for (const busyPeriod of busyIntervals) {
+    if (currentFreeStart < busyPeriod.start) {
+      const slotEnd = new Date(
+        Math.min(busyPeriod.start.getTime(), queryEndTime.getTime()),
+      );
+      if (currentFreeStart < slotEnd) {
+        freeSlots.push({ end: slotEnd, start: currentFreeStart });
+      }
+    }
+    currentFreeStart = new Date(
+      Math.max(currentFreeStart.getTime(), busyPeriod.end.getTime()),
+    );
+    if (currentFreeStart >= queryEndTime) {
+      break;
+    }
+  }
+
+  if (currentFreeStart < queryEndTime) {
+    freeSlots.push({ end: queryEndTime, start: currentFreeStart });
+  }
+
+  return freeSlots;
+}

@@ -6,7 +6,7 @@ import type { ToolInvocation, Message as UIMessage } from "ai";
 
 import { type UseChatOptions, useChat } from "@ai-sdk/react";
 import { nanoid } from "nanoid";
-import { match, P } from "ts-pattern";
+import { match } from "ts-pattern";
 
 import { ChatContainer } from "@/components/prompt-kit/chat-container";
 import { Markdown } from "@/components/prompt-kit/markdown";
@@ -39,23 +39,22 @@ export function ChatSidebar() {
       api: "/api/ai/chat",
 
       onFinish: (message) => {
-        message.parts?.forEach((part) =>
-          match(part)
-            .with(
-              {
-                toolInvocation: {
-                  result: { error: P.nullish },
-                  state: "result",
-                  toolName: P.union("createEvent", "updateEvent"),
-                },
-                type: "tool-invocation",
-              },
-              () => {
+        if (message.parts) {
+          for (const part of message.parts) {
+            if (part.type === "tool-invocation") {
+              const toolInvocation = part.toolInvocation as ToolInvocation;
+              if (
+                (toolInvocation.toolName === "createEvent" ||
+                  toolInvocation.toolName === "updateEvent") &&
+                toolInvocation.state === "result" &&
+                !toolInvocation.result.error
+              ) {
                 utils.calendar.getEvents.invalidate();
-              },
-            )
-            .otherwise(() => {}),
-        );
+                break;
+              }
+            }
+          }
+        }
       },
     } satisfies UseChatOptions);
 

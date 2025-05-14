@@ -70,3 +70,27 @@ export const ProcessedCalendarEventSchema = z.object({
   start: z.date(),
   title: z.string(),
 });
+
+export const TimeSlotSchema = z.object({
+  end: z.date(),
+  start: z.date(),
+});
+
+export const GoogleTimePeriodSchema = z.object({
+  end: z.string().datetime(),
+  start: z.string().datetime(),
+});
+
+export const GoogleFreeBusyCalendarSchema = z.object({
+  busy: z.array(GoogleTimePeriodSchema),
+  errors: z
+    .array(z.object({ domain: z.string(), reason: z.string() }))
+    .optional(),
+});
+
+export const GoogleFreeBusyResponseSchema = z.object({
+  calendars: z.record(z.string(), GoogleFreeBusyCalendarSchema),
+  kind: z.literal("calendar#freeBusy"),
+  timeMax: z.string().datetime(),
+  timeMin: z.string().datetime(),
+});

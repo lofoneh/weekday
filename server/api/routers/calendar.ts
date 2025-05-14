@@ -1,20 +1,27 @@
-import { v4 as uuidv4 } from "uuid";
+import { v7 as uuidv7 } from "uuid";
 import { z } from "zod";
 
 import {
   type GoogleEvent,
+  calculateFreeSlotsFromBusy,
   createHeaders,
   createRequestOptions,
   executeRequest,
   getGoogleAccount,
+  mergeAndSortBusyIntervals,
   prepareEventData,
   processEventData,
 } from "@/lib/calendar";
-import { GOOGLE_CALENDAR_LIST_API_URL } from "@/lib/constants";
+import {
+  GOOGLE_CALENDAR_LIST_API_URL,
+  GOOGLE_FREEBUSY_API_URL,
+} from "@/lib/constants";
 import {
   CalendarListResponseSchema,
+  GoogleFreeBusyResponseSchema,
   ProcessedCalendarEventSchema,
   ProcessedCalendarListEntrySchema,
+  TimeSlotSchema,
 } from "@/server/api/routers/schema";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 
@@ -82,7 +89,7 @@ export const calendarRouter = createTRPCRouter({
 
       if (input.createMeetLink) {
         finalEventPayload.conferenceData = {
-          createRequest: { requestId: uuidv4() },
+          createRequest: { requestId: uuidv7() },
         };
       }
 
@@ -359,6 +366,94 @@ export const calendarRouter = createTRPCRouter({
         return flatResults;
       } catch (error) {
         console.error("Error fetching calendar events:", error);
+        throw error;
+      }
+    }),
+
+  getFreeSlots: protectedProcedure
+    .input(
+      z.object({
+        calendarIds: z.array(z.string()).min(1).optional().default(["primary"]),
+        timeMax: z.string().datetime({
+          message: "Invalid timeMax format. Expected ISO 8601 datetime string.",
+        }),
+        timeMin: z.string().datetime({
+          message: "Invalid timeMin format. Expected ISO 8601 datetime string.",
+        }),
+        timeZone: z.string().optional().default("UTC"),
+      }),
+    )
+    .output(z.array(TimeSlotSchema))
+    .query(async ({ ctx, input }) => {
+      const account = await getGoogleAccount(ctx.db, ctx.session.user.id);
+      if (!account.accessToken) {
+        throw new Error("No access token found for Google Account.");
+      }
+
+      const headers = createHeaders(account.accessToken);
+      headers.append("Content-Type", "application/json");
+
+      const requestBody = {
+        items: input.calendarIds.map((id) => ({ id })),
+        timeMax: input.timeMax,
+        timeMin: input.timeMin,
+        timeZone: input.timeZone,
+      };
+
+      const options = createRequestOptions(
+        headers,
+        "POST",
+        JSON.stringify(requestBody),
+      );
+
+      try {
+        const response = await executeRequest(
+          GOOGLE_FREEBUSY_API_URL,
+          options,
+          account,
+          ctx.session.user.id,
+        );
+        const freeBusyDataRaw = await response.json();
+        const freeBusyData =
+          GoogleFreeBusyResponseSchema.parse(freeBusyDataRaw);
+
+        const allBusyPeriodsRaw: Array<{ end: string; start: string }> = [];
+        for (const calId in freeBusyData.calendars) {
+          const calendarInfo = freeBusyData.calendars[calId];
+          if (calendarInfo?.errors && calendarInfo.errors.length > 0) {
+            console.warn(
+              `Errors encountered for calendar ${calId}:`,
+              calendarInfo.errors,
+            );
+          }
+
+          if (calendarInfo?.busy) {
+            allBusyPeriodsRaw.push(...calendarInfo.busy);
+          }
+        }
+
+        const mergedBusyIntervals =
+          mergeAndSortBusyIntervals(allBusyPeriodsRaw);
+
+        const queryStartTime = new Date(input.timeMin);
+        const queryEndTime = new Date(input.timeMax);
+
+        if (queryStartTime >= queryEndTime) {
+          console.warn(
+            "timeMin is not before timeMax, returning no free slots.",
+          );
+          return [];
+        }
+
+        const freeSlots = calculateFreeSlotsFromBusy(
+          mergedBusyIntervals,
+          queryStartTime,
+          queryEndTime,
+        );
+
+        return freeSlots;
+      } catch (error) {
+        console.error("Error fetching or processing free/busy data:", error);
         throw error;
       }
     }),
