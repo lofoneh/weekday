@@ -31,7 +31,7 @@ export function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar> & { session: Session }) {
   const { isCalendarVisible, toggleCalendarVisibility } = useCalendarContext();
-  const { data: calendars } = api.calendar.getAllCalendarList.useQuery();
+  const { data: calendars } = api.calendar.getCalendars.useQuery();
 
   return (
     <Sidebar
