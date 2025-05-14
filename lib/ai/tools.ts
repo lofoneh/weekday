@@ -531,3 +531,66 @@ export const createEvent = tool({
     }
   },
 });
+
+export const getFreeSlotsSchema = z.object({
+  calendarIds: z
+    .array(
+      z
+        .string()
+        .describe(
+          "A calendar ID, typically 'primary' for the user or an email address for another person.",
+        ),
+    )
+    .min(1, { message: "At least one calendar ID must be provided." })
+    .describe(
+      "A list of calendar IDs to check for free/busy information. For the current user, 'primary' is common. For others, use their email address.",
+    ),
+  timeMax: z
+    .string()
+    .datetime({ message: "Invalid ISO 8601 datetime format for timeMax." })
+    .describe(
+      "The end of the date/time range for the free/busy query, in ISO 8601 format. Must be accurately inferred (e.g., 'tomorrow morning' implies end of business hours or noon).",
+    ),
+  timeMin: z
+    .string()
+    .datetime({ message: "Invalid ISO 8601 datetime format for timeMin." })
+    .describe(
+      "The start of the date/time range for the free/busy query, in ISO 8601 format. Must be accurately inferred from the user's request (e.g., 'tomorrow morning' implies start of business hours).",
+    ),
+  timeZone: z
+    .string()
+    .optional()
+    .describe(
+      "The IANA time zone (e.g., 'America/New_York') for interpreting timeMin and timeMax if they lack offsets, and for the response. If not specified, agent should use user's primary calendar timezone or UTC and clarify if necessary.",
+    ),
+});
+
+export const getFreeSlots = tool({
+  description:
+    "Queries the free/busy status for a list of specified calendars within a given time range. Use this to determine when users are available or busy, which is essential for finding suitable meeting times or answering questions about availability.",
+  parameters: getFreeSlotsSchema,
+  execute: async ({
+    calendarIds,
+    timeMax,
+    timeMin,
+    timeZone,
+  }: z.infer<typeof getFreeSlotsSchema>) => {
+    try {
+      const freeBusyInfo = await api.calendar.getFreeSlots({
+        calendarIds,
+        timeMax,
+        timeMin,
+        timeZone,
+      });
+
+      return { freeBusyData: freeBusyInfo };
+    } catch (error) {
+      console.error("Error querying free/busy times:", error);
+      const errorMessage =
+        typeof error === "object" && error !== null && "message" in error
+          ? String((error as { message: string }).message)
+          : "Failed to query free/busy information due to an unexpected error.";
+      return { error: errorMessage, freeBusyData: null };
+    }
+  },
+});

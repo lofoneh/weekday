@@ -8,6 +8,7 @@ import {
   createEvent,
   getEvent,
   getEvents,
+  getFreeSlots,
   getNextUpcomingEvent,
   updateEvent,
 } from "@/lib/ai/tools";
@@ -30,6 +31,7 @@ export async function POST(req: Request) {
       weekday: "long",
       year: "numeric",
     });
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     const result = streamText({
       experimental_generateMessageId: uuidv7,
@@ -37,11 +39,12 @@ export async function POST(req: Request) {
       maxSteps: 25,
       messages,
       model: openrouter.chat("google/gemini-2.5-flash-preview"),
-      system: systemPrompt({ currentDate, formattedDate }),
+      system: systemPrompt({ currentDate, formattedDate, timezone }),
       tools: {
         createEvent,
         getEvent,
         getEvents,
+        getFreeSlots,
         getNextUpcomingEvent,
         updateEvent,
       },

@@ -96,6 +96,8 @@ export function ChatSidebar() {
           {messages.map((message: UIMessage) => {
             const isAssistant = message.role === "assistant";
 
+            console.log(message);
+
             const allParts = [];
 
             if (message.parts?.length) {

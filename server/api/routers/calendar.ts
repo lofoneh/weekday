@@ -344,7 +344,7 @@ export const calendarRouter = createTRPCRouter({
               const eventEnd = new Date(event.end);
 
               if (!event.allDay) {
-                return eventStart >= timeMinDate && eventEnd <= timeMaxDate;
+                return eventStart < timeMaxDate && eventEnd > timeMinDate;
               } else if (input?.includeAllDay !== false) {
                 return eventStart <= timeMaxDate && eventEnd >= timeMinDate;
               }
