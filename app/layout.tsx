@@ -34,12 +34,12 @@ export default function RootLayout({
           disableTransitionOnChange
           enableSystem
         >
-          <TRPCReactProvider>
-            <ChatProvider>
+          <ChatProvider>
+            <TRPCReactProvider>
               <CalendarProvider>{children}</CalendarProvider>
               <Toaster />
-            </ChatProvider>
-          </TRPCReactProvider>
+            </TRPCReactProvider>
+          </ChatProvider>
         </ThemeProvider>
       </body>
     </html>

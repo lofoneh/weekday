@@ -2,6 +2,9 @@
 
 import * as React from "react";
 
+import { useAtom } from "jotai";
+import { atomWithStorage } from "jotai/utils";
+
 type ChatContextProps = {
   isChatOpen: boolean;
   setIsChatOpen: (isOpen: boolean) => void;
@@ -9,6 +12,8 @@ type ChatContextProps = {
 };
 
 const ChatContext = React.createContext<ChatContextProps | null>(null);
+
+const chatPanelAtom = atomWithStorage<boolean>("weekday_chat_panel", true);
 
 export function useChat() {
   const context = React.useContext(ChatContext);
@@ -19,11 +24,11 @@ export function useChat() {
 }
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
-  const [isChatOpen, setIsChatOpen] = React.useState(false);
+  const [isChatOpen, setIsChatOpen] = useAtom(chatPanelAtom);
 
   const toggleChat = React.useCallback(() => {
-    setIsChatOpen((prev) => !prev);
-  }, []);
+    setIsChatOpen((prev: boolean) => !prev);
+  }, [setIsChatOpen]);
 
   const contextValue = React.useMemo(
     () => ({
@@ -31,7 +36,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setIsChatOpen,
       toggleChat,
     }),
-    [isChatOpen, toggleChat],
+    [isChatOpen, setIsChatOpen, toggleChat],
   );
 
   return (
