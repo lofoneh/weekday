@@ -3,6 +3,8 @@ import { smoothStream, streamText } from "ai";
 import { v7 as uuidv7 } from "uuid";
 
 import { env } from "@/env";
+import { systemPrompt } from "@/lib/ai/system-prompt";
+import { getEvents } from "@/lib/ai/tools";
 
 export const maxDuration = 30;
 
@@ -14,13 +16,23 @@ export async function POST(req: Request) {
       apiKey: env.OPENROUTER_API_KEY,
     });
 
+    const now = new Date();
+    const currentDate = now.toISOString();
+    const formattedDate = now.toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "long",
+      weekday: "long",
+      year: "numeric",
+    });
+
     const result = await streamText({
       experimental_generateMessageId: uuidv7,
       experimental_transform: smoothStream({ chunking: "word" }),
       maxSteps: 25,
       messages,
       model: openrouter.chat("google/gemini-2.5-flash-preview"),
-      system: "You are a helpful assistant.",
+      system: systemPrompt({ currentDate, formattedDate }),
+      tools: { getEvents },
     });
 
     return result.toDataStreamResponse();
