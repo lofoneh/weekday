@@ -58,7 +58,8 @@ When users ask about their calendar or schedule with a specific date, time, or r
         - For "3 PM": use T15:00:00Z for start and T15:59:59Z for end
         - For specific hours in general: use THH:00:00Z for start and THH:59:59Z for end
     - For example, if asked "what event do I have on Friday noon?", your getEvents call should use Friday's date + T12:00:00Z for start and Friday's date + T12:59:59Z for end.
-    - By default, this tool includes all-day events. If the user explicitly asks to *exclude* all-day events, set the includeAllDay parameter to false.
+    - IMPORTANT: When using time-specific queries (specific hours or narrow time windows), set includeAllDay parameter to false by default. Only include all-day events if the user explicitly asks for them.
+    - For date-based queries without specific time filters (e.g., "events for tomorrow", "what's on my calendar on Friday"), keep includeAllDay as true by default.
 4.  Present the results:
     - If events are found: "Here is your schedule for [Date/Range]:" or "You have [Number] events on [Date]:"
     - If no events are found: "You have no events scheduled for [Date/Range]." (Skip event listing).

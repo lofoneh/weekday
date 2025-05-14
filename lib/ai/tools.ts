@@ -41,15 +41,20 @@ export const getEvents = tool({
       ),
   }),
   execute: async ({ end, endTime, includeAllDay, start, startTime }) => {
-    console.log("getEvents", { end, endTime, includeAllDay, start, startTime });
-
     try {
-      const fullStart = startTime
-        ? `${start.split("T")[0]}${startTime}`
-        : `${start.split("T")[0]}T00:00:00Z`;
-      const fullEnd = endTime
-        ? `${end.split("T")[0]}${endTime}`
-        : `${end.split("T")[0]}T23:59:59Z`;
+      let fullEnd, fullStart;
+
+      if (start.includes("T")) {
+        fullStart = start;
+      } else {
+        fullStart = startTime ? `${start}${startTime}` : `${start}T00:00:00Z`;
+      }
+
+      if (end.includes("T")) {
+        fullEnd = end;
+      } else {
+        fullEnd = endTime ? `${end}${endTime}` : `${end}T23:59:59Z`;
+      }
 
       const events = await api.calendar.getEvents({
         includeAllDay: includeAllDay,

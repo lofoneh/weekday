@@ -264,7 +264,6 @@ export const calendarRouter = createTRPCRouter({
       const options = createRequestOptions(headers);
 
       try {
-        // First, fetch all available calendars
         const calListResponse = await executeRequest(
           GOOGLE_CALENDAR_LIST_API_URL,
           options,
@@ -287,7 +286,7 @@ export const calendarRouter = createTRPCRouter({
         }
 
         const now = new Date();
-        const defaultTimeMin = new Date(now.getFullYear(), now.getMonth(), 1); // first day of current month
+        const defaultTimeMin = new Date(now.getFullYear(), now.getMonth(), 1);
         const defaultTimeMax = new Date(
           now.getFullYear(),
           now.getMonth() + 1,
@@ -299,6 +298,9 @@ export const calendarRouter = createTRPCRouter({
 
         const timeMinISO = input?.timeMin ?? defaultTimeMin.toISOString();
         const timeMaxISO = input?.timeMax ?? defaultTimeMax.toISOString();
+
+        const timeMinDate = new Date(timeMinISO);
+        const timeMaxDate = new Date(timeMaxISO);
 
         const fetchPromises = calendarsToFetch.map(async (calendar) => {
           const params = new URLSearchParams({
@@ -322,13 +324,26 @@ export const calendarRouter = createTRPCRouter({
             const evData = await response.json();
             const items = (evData.items ?? []) as GoogleEvent[];
 
-            return items
+            const validEvents = items
               .filter((item) => {
                 const startStr = item.start?.dateTime ?? item.start?.date;
                 const endStr = item.end?.dateTime ?? item.end?.date;
                 return !!startStr && !!endStr;
               })
               .map((item) => processEventData(item, calendar.id));
+
+            return validEvents.filter((event) => {
+              const eventStart = new Date(event.start);
+              const eventEnd = new Date(event.end);
+
+              if (!event.allDay) {
+                return eventStart >= timeMinDate && eventEnd <= timeMaxDate;
+              } else if (input?.includeAllDay !== false) {
+                return eventStart <= timeMaxDate && eventEnd >= timeMinDate;
+              }
+
+              return false;
+            });
           } catch (fetchError) {
             console.error(
               `Error fetching events for calendar ${calendar.id}:`,
@@ -339,12 +354,7 @@ export const calendarRouter = createTRPCRouter({
         });
 
         const results = await Promise.all(fetchPromises);
-        let flatResults = results.flat();
-
-        // Filter out all-day events only if includeAllDay is explicitly false
-        if (input?.includeAllDay === false) {
-          flatResults = flatResults.filter((event) => !event.allDay);
-        }
+        const flatResults = results.flat();
 
         return flatResults;
       } catch (error) {
