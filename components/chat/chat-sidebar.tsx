@@ -97,10 +97,42 @@ export function ChatSidebar() {
           {messages.map((message: UIMessage) => {
             const isAssistant = message.role === "assistant";
 
+            const allParts = [];
+
+            if (message.parts?.length) {
+              allParts.push(...message.parts);
+            }
+
+            if ((message as any).toolInvocations?.length) {
+              const toolInvocations = (message as any).toolInvocations;
+
+              for (const toolInvoc of toolInvocations) {
+                const alreadyInParts = message.parts?.some(
+                  (part) =>
+                    part.type === "tool-invocation" &&
+                    part.toolInvocation?.toolCallId === toolInvoc.toolCallId,
+                );
+
+                if (!alreadyInParts) {
+                  allParts.push({
+                    toolInvocation: toolInvoc,
+                    type: "tool-invocation",
+                  });
+                }
+              }
+            }
+
+            if (allParts.length === 0 && message.content) {
+              allParts.push({
+                text: message.content,
+                type: "text",
+              });
+            }
+
             return (
               <Message key={message.id}>
                 <div className="flex-1 space-y-2">
-                  {message.parts?.map((part, index) => {
+                  {allParts.map((part, index) => {
                     const toolInvocation =
                       part.type === "tool-invocation"
                         ? (part.toolInvocation as ToolInvocation)
@@ -116,7 +148,7 @@ export function ChatSidebar() {
                               className="text-foreground prose rounded-lg p-2"
                             >
                               <Markdown className="prose dark:prose-invert">
-                                {text}
+                                {String(text)}
                               </Markdown>
                             </div>
                           ))
@@ -126,7 +158,7 @@ export function ChatSidebar() {
                               className="bg-sidebar text-primary-foreground dark:text-foreground prose-invert"
                               markdown
                             >
-                              {text}
+                              {String(text)}
                             </MessageContent>
                           ))
                           .exhaustive(),
@@ -240,13 +272,13 @@ export function ChatSidebar() {
                       .otherwise(() => null);
                   })}
 
-                  {!message.parts && (
+                  {allParts.length === 0 && (
                     <>
                       {match(isAssistant)
                         .with(true, () => (
                           <div className="bg-secondary text-foreground prose rounded-lg p-2">
                             <Markdown className="prose dark:prose-invert">
-                              {message.content}
+                              {String(message.content || "")}
                             </Markdown>
                           </div>
                         ))
@@ -255,7 +287,7 @@ export function ChatSidebar() {
                             className="bg-primary text-primary-foreground prose-invert"
                             markdown
                           >
-                            {message.content}
+                            {String(message.content || "")}
                           </MessageContent>
                         ))
                         .exhaustive()}
