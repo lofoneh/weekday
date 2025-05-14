@@ -5,13 +5,7 @@ import { useRef, useState } from "react";
 import type { ToolInvocation, Message as UIMessage } from "ai";
 
 import { type UseChatOptions, useChat } from "@ai-sdk/react";
-import {
-  addMinutes,
-  format,
-  formatDistanceToNowStrict,
-  isToday,
-  startOfDay,
-} from "date-fns";
+import { format, isToday, startOfDay } from "date-fns";
 import { CalendarDays, PencilRuler } from "lucide-react";
 import { nanoid } from "nanoid";
 
@@ -40,6 +34,29 @@ const groupEventsByDate = (
     grouped.get(eventDate)!.push(event);
   });
   return grouped;
+};
+
+const formatPreciseUpcomingStatusText = (totalMinutes: number): string => {
+  if (totalMinutes <= 0) {
+    return "Starting now";
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  const parts: string[] = [];
+  if (hours > 0) {
+    parts.push(`${hours} hour${hours > 1 ? "s" : ""}`);
+  }
+  if (minutes > 0) {
+    parts.push(`${minutes} minute${minutes > 1 ? "s" : ""}`);
+  }
+
+  if (parts.length === 0) {
+    return "Starts in less than a minute";
+  }
+
+  return `Starts in ${parts.join(" ")}`;
 };
 
 export function ChatSidebar() {
@@ -322,13 +339,8 @@ export function ChatSidebar() {
 
                           let statusText = "";
                           if (eventStatus === "upcoming") {
-                            if (minutesToStart < 0) {
-                              statusText = "Starting now";
-                            } else {
-                              const now = new Date();
-                              const startTime = addMinutes(now, minutesToStart);
-                              statusText = `Starts ${formatDistanceToNowStrict(startTime, { addSuffix: true })}`;
-                            }
+                            statusText =
+                              formatPreciseUpcomingStatusText(minutesToStart);
                           } else if (eventStatus === "ongoing") {
                             statusText = "Ongoing";
                           }
