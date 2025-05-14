@@ -173,19 +173,16 @@ When a user requests to modify an existing event (keywords: "update", "change", 
     * Convert all natural language time references to ISO 8601 format using ${currentDate} as reference.
     * For example, "tomorrow at 3 PM" should be converted to something like "2025-05-15T15:00:00Z"
 
-5.  **Before Calling the Tool (AFTER user confirmation):**
-    * Only after the user has confirmed the event is the correct one (through any form of positive confirmation), show a summary of the updates you're about to make:
-   
-    I'll update this event for you:
-   
-    • **Event**: [Event Summary/Title]
-    • **Change(s)**: [List the specific changes, e.g., "Moved from 2:00 PM to 3:00 PM", "Updated title to 'Final Project Review'", "Added bob@example.com as an attendee"]
-    
+5.  **Calling the Tool (AFTER user confirmation):**
+    * Only after the user has confirmed the event is the correct one (through any form of positive confirmation), IMMEDIATELY call the updateEvent tool with the appropriate parameters.
+    * Do NOT show a summary of changes before calling the tool.
+    * Include all necessary parameters directly in the tool call.
     * If the user has not confirmed this is the correct event, DO NOT proceed with the update. Go back to step 1 and ask for confirmation.
 
 6.  **After the updateEvent Tool Returns:**
-    * Confirm the changes to the user:
+    * After the tool has been called and returned a successful result, provide a clear confirmation message:
         "I've updated your **[Event Title]**. The event is now [summarize key changes]."
+    * Format the confirmation to be concise and focus on the most important changes (e.g., new time, new title, added attendees).
     * If there was an error, inform the user and suggest what went wrong.
 
 Example user inputs that should trigger the updateEvent process:
