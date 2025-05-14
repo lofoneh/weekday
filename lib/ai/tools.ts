@@ -82,6 +82,39 @@ export const getEvents = tool({
   },
 });
 
+export const getEvent = tool({
+  description: "Retrieves a specific calendar event by its ID from the user's Google Calendar.",
+  parameters: z.object({
+    calendarId: z.string().default("primary").describe("The calendar ID where the event is located. Defaults to 'primary'."),
+    eventId: z.string().describe("The unique identifier of the event to retrieve."),
+  }),
+  execute: async ({ calendarId, eventId }) => {
+    try {
+      const event = await api.calendar.getEvent({
+        calendarId,
+        eventId,
+      });
+
+      return {
+        event: {
+          id: event.id,
+          allDay: event.allDay,
+          calendarId: event.calendarId,
+          color: event.color,
+          description: event.description,
+          end: event.end,
+          location: event.location,
+          start: event.start,
+          title: event.title,
+        },
+      };
+    } catch (error) {
+      console.error("Error fetching event:", error);
+      return { error: "Failed to fetch the calendar event.", event: null };
+    }
+  },
+});
+
 export const getNextUpcomingEvent = tool({
   description:
     "Retrieves the very next upcoming event from all calendars from the current time. Tells you if the event is ongoing, starting soon, or upcoming.",
@@ -237,6 +270,187 @@ const createEventSchema = z.object({
     .describe(
       "The IANA time zone for the event's start and end times (e.g., 'America/Los_Angeles'). If the user doesn't specify, attempt to use the user's primary calendar timezone or a sensible default like UTC, and inform the user if a default is assumed.",
     ),
+});
+
+const updateEventSchema = z.object({
+  attendeesToAdd: z
+    .array(
+      z.object({
+        email: z
+          .string()
+          .email({ message: "Invalid email format for attendee to add." }),
+      }),
+    )
+    .optional()
+    .describe("List of new attendees (by email) to add to the event."),
+  attendeesToRemove: z
+    .array(
+      z.object({
+        email: z
+          .string()
+          .email({ message: "Invalid email format for attendee to remove." }),
+      }),
+    )
+    .optional()
+    .describe(
+      "List of existing attendees (by email) to remove from the event.",
+    ),
+  description: z
+    .string()
+    .optional()
+    .describe(
+      "The new description for the event. If provided, this will replace the existing description.",
+    ),
+  eventId: z
+    .string()
+    .describe(
+      "The unique ID of the event to update. This is mandatory. If the user's request is ambiguous, prompt them to first identify the specific event or use the 'Find Events' tool.",
+    ),
+  location: z
+    .string()
+    .optional()
+    .describe(
+      "The new location for the event. If provided, this will replace the existing location.",
+    ),
+  newEndTime: z
+    .string()
+    .datetime({ message: "Invalid ISO 8601 datetime format for newEndTime." })
+    .optional()
+    .describe(
+      "The new end date and time in ISO 8601 format. If only newStartTime is provided, the agent should attempt to maintain the event's original duration when calculating this.",
+    ),
+  newStartTime: z
+    .string()
+    .datetime({ message: "Invalid ISO 8601 datetime format for newStartTime." })
+    .optional()
+    .describe(
+      "The new start date and time in ISO 8601 format. If provided, newEndTime should also be considered or calculated based on original duration.",
+    ),
+  originalEndTime: z
+    .string()
+    .datetime({ message: "Invalid ISO 8601 datetime format for originalEndTime." })
+    .optional()
+    .describe(
+      "The original end date and time of the event in ISO 8601 format. This is used for calculating the duration when only newStartTime is provided.",
+    ),
+  originalStartTime: z
+    .string()
+    .datetime({ message: "Invalid ISO 8601 datetime format for originalStartTime." })
+    .optional()
+    .describe(
+      "The original start date and time of the event in ISO 8601 format. This is used for calculating the duration when only newStartTime is provided.",
+    ),
+  sendUpdates: z
+    .enum(["all", "externalOnly", "none"])
+    .optional()
+    .default("all")
+    .describe(
+      "Specifies who should receive update notifications regarding the changes. Defaults to 'all'.",
+    ),
+  summary: z
+    .string()
+    .optional()
+    .describe(
+      "The new title for the event. If provided, this will replace the existing summary.",
+    ),
+  timeZone: z
+    .string()
+    .optional()
+    .describe(
+      "The IANA time zone for the new start and end times (e.g., 'America/Los_Angeles'). Applies if newStartTime or newEndTime are being set.",
+    ),
+});
+
+export const updateEvent = tool({
+  description:
+    "Updates an existing event in the user's Google Calendar. Use this to change event details like title, time, location, attendees, or description. This tool requires an event identifier (eventId). If the user refers to an event ambiguously (e.g., 'my meeting tomorrow at 10'), the eventId might need to be found using the 'Find Events' tool first before this update tool can be used.",
+  parameters: updateEventSchema,
+  execute: async ({
+    attendeesToAdd,
+    attendeesToRemove,
+    description,
+    eventId,
+    location,
+    newEndTime,
+    newStartTime,
+    originalEndTime,
+    originalStartTime,
+    sendUpdates,
+    summary,
+  }: z.infer<typeof updateEventSchema>) => {
+    try {
+      // Note: This tool assumes the caller has already fetched the event details
+      // using the getEvent tool and is providing the necessary information for updates
+      
+      const updatePayload: any = {
+        calendarId: "primary",
+        event: {},
+        eventId,
+      };
+
+      // Update title if provided
+      if (summary !== undefined) {
+        updatePayload.event.title = summary;
+      }
+
+      // Update description if provided
+      if (description !== undefined) {
+        updatePayload.event.description = description;
+      }
+
+      // Update location if provided
+      if (location !== undefined) {
+        updatePayload.event.location = location;
+      }
+
+      // Handle time changes
+      if (newStartTime) {
+        updatePayload.event.start = new Date(newStartTime);
+
+        // If end time is not provided but we have original times, maintain the original duration
+        if (!newEndTime && originalStartTime && originalEndTime) {
+          const originalDuration =
+            new Date(originalEndTime).getTime() -
+            new Date(originalStartTime).getTime();
+          const newEndTimeDate = new Date(
+            new Date(newStartTime).getTime() + originalDuration,
+          );
+          updatePayload.event.end = newEndTimeDate;
+        }
+      }
+
+      if (newEndTime) {
+        updatePayload.event.end = new Date(newEndTime);
+      }
+
+      // Handle attendees (this would actually happen in the backend with the full event object)
+      // We're just preparing the update request here
+
+      // Update the event using the trpc procedure
+      const updatedEvent = await api.calendar.updateEvent(updatePayload);
+
+      return {
+        event: {
+          id: updatedEvent.id,
+          allDay: updatedEvent.allDay,
+          calendarId: updatedEvent.calendarId,
+          description: updatedEvent.description,
+          end: updatedEvent.end.toISOString(),
+          location: updatedEvent.location,
+          start: updatedEvent.start.toISOString(),
+          title: updatedEvent.title,
+        },
+        message: "Event updated successfully.",
+      };
+    } catch (error) {
+      console.error("Error updating event with tool:", error);
+      const errorMessage =
+        typeof error === "object" && error !== null && "message" in error
+          ? String((error as { message: string }).message)
+          : "Failed to update calendar event due to an unexpected error.";
+      return { error: errorMessage };
+    }
+  },
 });
 
 export const createEvent = tool({

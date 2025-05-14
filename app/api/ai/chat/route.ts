@@ -4,7 +4,13 @@ import { v7 as uuidv7 } from "uuid";
 
 import { env } from "@/env";
 import { systemPrompt } from "@/lib/ai/system-prompt";
-import { createEvent, getEvents, getNextUpcomingEvent } from "@/lib/ai/tools";
+import {
+  createEvent,
+  getEvent,
+  getEvents,
+  getNextUpcomingEvent,
+  updateEvent,
+} from "@/lib/ai/tools";
 
 export const maxDuration = 30;
 
@@ -25,7 +31,7 @@ export async function POST(req: Request) {
       year: "numeric",
     });
 
-    const result = await streamText({
+    const result = streamText({
       experimental_generateMessageId: uuidv7,
       experimental_transform: smoothStream({ chunking: "word" }),
       maxSteps: 25,
@@ -34,8 +40,10 @@ export async function POST(req: Request) {
       system: systemPrompt({ currentDate, formattedDate }),
       tools: {
         createEvent,
+        getEvent,
         getEvents,
         getNextUpcomingEvent,
+        updateEvent,
       },
     });
 
