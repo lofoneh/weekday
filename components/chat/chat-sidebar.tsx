@@ -6,6 +6,7 @@ import type { ToolInvocation, Message as UIMessage } from "ai";
 
 import { type UseChatOptions, useChat } from "@ai-sdk/react";
 import { nanoid } from "nanoid";
+import { match, P } from "ts-pattern";
 
 import { ChatContainer } from "@/components/prompt-kit/chat-container";
 import { Markdown } from "@/components/prompt-kit/markdown";
@@ -38,22 +39,23 @@ export function ChatSidebar() {
       api: "/api/ai/chat",
 
       onFinish: (message) => {
-        if (message.parts) {
-          for (const part of message.parts) {
-            if (part.type === "tool-invocation") {
-              const toolInvocation = part.toolInvocation as ToolInvocation;
-              if (
-                (toolInvocation.toolName === "createEvent" ||
-                  toolInvocation.toolName === "updateEvent") &&
-                toolInvocation.state === "result" &&
-                !toolInvocation.result.error
-              ) {
+        message.parts?.forEach((part) =>
+          match(part)
+            .with(
+              {
+                toolInvocation: {
+                  result: { error: P.nullish },
+                  state: "result",
+                  toolName: P.union("createEvent", "updateEvent"),
+                },
+                type: "tool-invocation",
+              },
+              () => {
                 utils.calendar.getEvents.invalidate();
-                break;
-              }
-            }
-          }
-        }
+              },
+            )
+            .otherwise(() => {}),
+        );
       },
     } satisfies UseChatOptions);
 
@@ -99,115 +101,164 @@ export function ChatSidebar() {
               <Message key={message.id}>
                 <div className="flex-1 space-y-2">
                   {message.parts?.map((part, index) => {
-                    if (part.type === "text") {
-                      return isAssistant ? (
-                        <div
-                          key={`${message.id}-text-${index}`}
-                          className="text-foreground prose rounded-lg p-2"
-                        >
-                          <Markdown className="prose dark:prose-invert">
-                            {part.text}
-                          </Markdown>
-                        </div>
-                      ) : (
-                        <MessageContent
-                          key={`${message.id}-text-${index}`}
-                          className="bg-sidebar text-primary-foreground dark:text-foreground prose-invert"
-                          markdown
-                        >
-                          {part.text}
-                        </MessageContent>
-                      );
-                    } else if (part.type === "tool-invocation") {
-                      const toolInvocation =
-                        part.toolInvocation as ToolInvocation;
-                      const toolCallId = toolInvocation.toolCallId;
+                    const toolInvocation =
+                      part.type === "tool-invocation"
+                        ? (part.toolInvocation as ToolInvocation)
+                        : undefined;
+                    const toolCallId = toolInvocation?.toolCallId;
 
-                      if (toolInvocation.toolName === "getEvents") {
-                        if (toolInvocation.state === "call") {
-                          return <GetEventCall key={toolCallId} />;
-                        }
-
-                        if (toolInvocation.state === "result") {
-                          return (
-                            <GetEventResult
-                              key={toolCallId}
-                              toolInvocation={toolInvocation}
-                            />
-                          );
-                        }
-                      }
-
-                      if (toolInvocation.toolName === "createEvent") {
-                        if (toolInvocation.state === "call") {
-                          return <CreateEventCall key={toolCallId} />;
-                        }
-
-                        if (toolInvocation.state === "result") {
-                          return (
-                            <CreateEventResult
-                              key={toolCallId}
-                              toolInvocation={toolInvocation}
-                            />
-                          );
-                        }
-                      }
-
-                      if (toolInvocation.toolName === "updateEvent") {
-                        if (toolInvocation.state === "call") {
-                          return (
-                            <UpdateEventCall
-                              key={toolCallId}
-                              toolInvocation={toolInvocation}
-                            />
-                          );
-                        }
-
-                        if (toolInvocation.state === "result") {
-                          return (
-                            <UpdateEventResult
-                              key={toolCallId}
-                              message={message}
-                              toolInvocation={toolInvocation}
-                            />
-                          );
-                        }
-                      }
-
-                      if (toolInvocation.toolName === "getNextUpcomingEvent") {
-                        if (toolInvocation.state === "call") {
-                          return <GetUpcomingEventCall key={toolCallId} />;
-                        }
-
-                        if (toolInvocation.state === "result") {
-                          return (
-                            <GetUpcomingEventResult
-                              key={toolCallId}
-                              toolInvocation={toolInvocation}
-                            />
-                          );
-                        }
-                      }
-                    }
-                    return null;
+                    return match(part)
+                      .with({ type: "text" }, ({ text }) =>
+                        match(isAssistant)
+                          .with(true, () => (
+                            <div
+                              key={`${message.id}-text-${index}`}
+                              className="text-foreground prose rounded-lg p-2"
+                            >
+                              <Markdown className="prose dark:prose-invert">
+                                {text}
+                              </Markdown>
+                            </div>
+                          ))
+                          .with(false, () => (
+                            <MessageContent
+                              key={`${message.id}-text-${index}`}
+                              className="bg-sidebar text-primary-foreground dark:text-foreground prose-invert"
+                              markdown
+                            >
+                              {text}
+                            </MessageContent>
+                          ))
+                          .exhaustive(),
+                      )
+                      .with(
+                        {
+                          toolInvocation: {
+                            state: "call",
+                            toolName: "getEvents",
+                          },
+                          type: "tool-invocation",
+                        },
+                        () => <GetEventCall key={toolCallId} />,
+                      )
+                      .with(
+                        {
+                          toolInvocation: {
+                            state: "result",
+                            toolName: "getEvents",
+                          },
+                          type: "tool-invocation",
+                        },
+                        ({ toolInvocation }) => (
+                          <GetEventResult
+                            key={toolCallId}
+                            toolInvocation={toolInvocation as ToolInvocation}
+                          />
+                        ),
+                      )
+                      .with(
+                        {
+                          toolInvocation: {
+                            state: "call",
+                            toolName: "createEvent",
+                          },
+                          type: "tool-invocation",
+                        },
+                        () => <CreateEventCall key={toolCallId} />,
+                      )
+                      .with(
+                        {
+                          toolInvocation: {
+                            state: "result",
+                            toolName: "createEvent",
+                          },
+                          type: "tool-invocation",
+                        },
+                        ({ toolInvocation }) => (
+                          <CreateEventResult
+                            key={toolCallId}
+                            toolInvocation={toolInvocation as ToolInvocation}
+                          />
+                        ),
+                      )
+                      .with(
+                        {
+                          toolInvocation: {
+                            state: "call",
+                            toolName: "updateEvent",
+                          },
+                          type: "tool-invocation",
+                        },
+                        ({ toolInvocation }) => (
+                          <UpdateEventCall
+                            key={toolCallId}
+                            toolInvocation={toolInvocation as ToolInvocation}
+                          />
+                        ),
+                      )
+                      .with(
+                        {
+                          toolInvocation: {
+                            state: "result",
+                            toolName: "updateEvent",
+                          },
+                          type: "tool-invocation",
+                        },
+                        ({ toolInvocation }) => (
+                          <UpdateEventResult
+                            key={toolCallId}
+                            message={message}
+                            toolInvocation={toolInvocation as ToolInvocation}
+                          />
+                        ),
+                      )
+                      .with(
+                        {
+                          toolInvocation: {
+                            state: "call",
+                            toolName: "getNextUpcomingEvent",
+                          },
+                          type: "tool-invocation",
+                        },
+                        () => <GetUpcomingEventCall key={toolCallId} />,
+                      )
+                      .with(
+                        {
+                          toolInvocation: {
+                            state: "result",
+                            toolName: "getNextUpcomingEvent",
+                          },
+                          type: "tool-invocation",
+                        },
+                        ({ toolInvocation }) => (
+                          <GetUpcomingEventResult
+                            key={toolCallId}
+                            toolInvocation={toolInvocation as ToolInvocation}
+                          />
+                        ),
+                      )
+                      .otherwise(() => null);
                   })}
 
                   {!message.parts && (
                     <>
-                      {isAssistant ? (
-                        <div className="bg-secondary text-foreground prose rounded-lg p-2">
-                          <Markdown className="prose dark:prose-invert">
+                      {match(isAssistant)
+                        .with(true, () => (
+                          <div className="bg-secondary text-foreground prose rounded-lg p-2">
+                            <Markdown className="prose dark:prose-invert">
+                              {message.content}
+                            </Markdown>
+                          </div>
+                        ))
+                        .with(false, () => (
+                          <MessageContent
+                            className="bg-primary text-primary-foreground prose-invert"
+                            markdown
+                          >
                             {message.content}
-                          </Markdown>
-                        </div>
-                      ) : (
-                        <MessageContent
-                          className="bg-primary text-primary-foreground prose-invert"
-                          markdown
-                        >
-                          {message.content}
-                        </MessageContent>
-                      )}
+                          </MessageContent>
+                        ))
+                        .exhaustive()}
                     </>
                   )}
                 </div>
