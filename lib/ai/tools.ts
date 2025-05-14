@@ -83,10 +83,18 @@ export const getEvents = tool({
 });
 
 export const getEvent = tool({
-  description: "Retrieves a specific calendar event by its ID from the user's Google Calendar.",
+  description:
+    "Retrieves a specific calendar event by its ID from the user's Google Calendar.",
   parameters: z.object({
-    calendarId: z.string().default("primary").describe("The calendar ID where the event is located. Defaults to 'primary'."),
-    eventId: z.string().describe("The unique identifier of the event to retrieve."),
+    calendarId: z
+      .string()
+      .default("primary")
+      .describe(
+        "The calendar ID where the event is located. Defaults to 'primary'.",
+      ),
+    eventId: z
+      .string()
+      .describe("The unique identifier of the event to retrieve."),
   }),
   execute: async ({ calendarId, eventId }) => {
     try {
@@ -328,14 +336,18 @@ const updateEventSchema = z.object({
     ),
   originalEndTime: z
     .string()
-    .datetime({ message: "Invalid ISO 8601 datetime format for originalEndTime." })
+    .datetime({
+      message: "Invalid ISO 8601 datetime format for originalEndTime.",
+    })
     .optional()
     .describe(
       "The original end date and time of the event in ISO 8601 format. This is used for calculating the duration when only newStartTime is provided.",
     ),
   originalStartTime: z
     .string()
-    .datetime({ message: "Invalid ISO 8601 datetime format for originalStartTime." })
+    .datetime({
+      message: "Invalid ISO 8601 datetime format for originalStartTime.",
+    })
     .optional()
     .describe(
       "The original start date and time of the event in ISO 8601 format. This is used for calculating the duration when only newStartTime is provided.",
@@ -381,7 +393,7 @@ export const updateEvent = tool({
     try {
       // Note: This tool assumes the caller has already fetched the event details
       // using the getEvent tool and is providing the necessary information for updates
-      
+
       const updatePayload: any = {
         calendarId: "primary",
         event: {},

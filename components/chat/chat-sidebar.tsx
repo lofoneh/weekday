@@ -5,8 +5,6 @@ import { useRef, useState } from "react";
 import type { ToolInvocation, Message as UIMessage } from "ai";
 
 import { type UseChatOptions, useChat } from "@ai-sdk/react";
-import { format, isToday, startOfDay } from "date-fns";
-import { CalendarDays } from "lucide-react";
 import { nanoid } from "nanoid";
 
 import { ChatContainer } from "@/components/prompt-kit/chat-container";
@@ -17,90 +15,14 @@ import { Button } from "@/components/ui/button";
 import { useChat as useChatProvider } from "@/providers/chat-provider";
 import { api } from "@/trpc/react";
 
-import type { CalendarEvent } from "../event-calendar/types";
-
-import { EventItem } from "../event-calendar/event-item";
 import { ChatPromptInput } from "./chat-prompt-input";
-
-const groupEventsByDate = (
-  events: CalendarEvent[],
-): Map<string, CalendarEvent[]> => {
-  const grouped = new Map<string, CalendarEvent[]>();
-  events.forEach((event) => {
-    const eventDate = startOfDay(new Date(event.start)).toISOString();
-    if (!grouped.has(eventDate)) {
-      grouped.set(eventDate, []);
-    }
-    grouped.get(eventDate)!.push(event);
-  });
-  return grouped;
-};
-
-const formatPreciseUpcomingStatusText = (totalMinutes: number): string => {
-  if (totalMinutes <= 0) {
-    return "Starting now";
-  }
-
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-
-  const parts: string[] = [];
-  if (hours > 0) {
-    parts.push(`${hours} hour${hours > 1 ? "s" : ""}`);
-  }
-  if (minutes > 0) {
-    parts.push(`${minutes} minute${minutes > 1 ? "s" : ""}`);
-  }
-
-  if (parts.length === 0) {
-    return "Starts in less than a minute";
-  }
-
-  return `Starts in ${parts.join(" ")}`;
-};
-
-const formatEventTimeDisplay = (
-  dateString: string | null | undefined,
-): string => {
-  if (!dateString) {
-    return "";
-  }
-  const date = new Date(dateString);
-  const minutes = date.getMinutes();
-  if (minutes === 0) {
-    return format(date, "ha");
-  }
-  return format(date, "h:mma");
-};
-
-const formatEventDateTime = (
-  dateString: string | null | undefined,
-  includeDate: boolean = false
-): string => {
-  if (!dateString) {
-    return "";
-  }
-  const date = new Date(dateString);
-  const minutes = date.getMinutes();
-  
-  if (includeDate) {
-    if (minutes === 0) {
-      return format(date, "MMM d, yyyy ha");
-    }
-    return format(date, "MMM d, yyyy h:mma");
-  } else {
-    if (minutes === 0) {
-      return format(date, "ha");
-    }
-    return format(date, "h:mma");
-  }
-};
-
-const datesAreDifferent = (date1: string, date2: string): boolean => {
-  const d1 = new Date(date1);
-  const d2 = new Date(date2);
-  return d1.toDateString() !== d2.toDateString();
-};
+import { CreateEventCall, CreateEventResult } from "./tools/create-event";
+import { GetEventCall, GetEventResult } from "./tools/get-event";
+import {
+  GetUpcomingEventCall,
+  GetUpcomingEventResult,
+} from "./tools/get-upcoming-event";
+import { UpdateEventCall, UpdateEventResult } from "./tools/update-event";
 
 export function ChatSidebar() {
   const { isChatOpen } = useChatProvider();
@@ -203,573 +125,66 @@ export function ChatSidebar() {
 
                       if (toolInvocation.toolName === "getEvents") {
                         if (toolInvocation.state === "call") {
-                          return (
-                            <div
-                              key={toolCallId}
-                              className="flex items-center gap-2 p-2"
-                            >
-                              <CalendarDays className="h-4 w-4 text-gray-500" />
-                              <p className="font-medium text-gray-700 dark:text-gray-300">
-                                Getting events...
-                              </p>
-                            </div>
-                          );
+                          return <GetEventCall key={toolCallId} />;
                         }
 
                         if (toolInvocation.state === "result") {
-                          const events = toolInvocation.result
-                            .events as CalendarEvent[];
-
-                          const groupedEvents = groupEventsByDate(events);
-                          const uniqueDates = Array.from(groupedEvents.keys());
-
                           return (
-                            <div
+                            <GetEventResult
                               key={toolCallId}
-                              className="flex flex-col gap-2 px-2 py-3"
-                            >
-                              <div className="flex items-center gap-2">
-                                <CalendarDays className="h-4 w-4 text-gray-500" />
-                                <p className="font-medium text-gray-700 dark:text-gray-300">
-                                  Calendar Events
-                                </p>
-                              </div>
-
-                              {events && events.length > 0 ? (
-                                uniqueDates.length === 1 ? (
-                                  <div className="mt-2 flex flex-col space-y-2">
-                                    {events.map((event: CalendarEvent) => (
-                                      <div
-                                        key={event.id}
-                                        className="flex h-full gap-2"
-                                      >
-                                        {!event.allDay &&
-                                          (event.start || event.end) && (
-                                            <div className="flex w-12 flex-shrink-0 flex-col items-end justify-between py-1 text-xs">
-                                              <p>
-                                                {event.start
-                                                  ? formatEventTimeDisplay(
-                                                      new Date(
-                                                        event.start,
-                                                      ).toISOString(),
-                                                    )
-                                                  : ""}
-                                              </p>
-                                              <p>
-                                                {event.end
-                                                  ? formatEventTimeDisplay(
-                                                      new Date(
-                                                        event.end,
-                                                      ).toISOString(),
-                                                    )
-                                                  : ""}
-                                              </p>
-                                            </div>
-                                          )}
-
-                                        <EventItem
-                                          onClick={() =>
-                                            console.log(
-                                              "Event clicked in chat:",
-                                              event,
-                                            )
-                                          }
-                                          event={event}
-                                          view="agenda"
-                                        />
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <div className="mt-2 flex flex-col">
-                                    {uniqueDates.map((dateStr) => {
-                                      const dayEvents =
-                                        groupedEvents.get(dateStr) || [];
-                                      if (dayEvents.length === 0) return null;
-
-                                      const groupStartDate = new Date(dateStr);
-
-                                      let maxEndDateForGroup = groupStartDate;
-                                      for (const event of dayEvents) {
-                                        if (event.end) {
-                                          const eventEndDate = new Date(
-                                            event.end,
-                                          );
-                                          if (!isNaN(eventEndDate.getTime())) {
-                                            if (
-                                              eventEndDate > maxEndDateForGroup
-                                            ) {
-                                              maxEndDateForGroup = eventEndDate;
-                                            }
-                                          }
-                                        }
-                                      }
-
-                                      let dateDisplayString: string;
-                                      if (
-                                        startOfDay(maxEndDateForGroup) >
-                                        startOfDay(groupStartDate)
-                                      ) {
-                                        dateDisplayString = `${format(
-                                          groupStartDate,
-                                          "d MMM",
-                                        )} - ${format(
-                                          maxEndDateForGroup,
-                                          "d MMM, EEEE",
-                                        )}`;
-                                      } else {
-                                        dateDisplayString = format(
-                                          groupStartDate,
-                                          "d MMM, EEEE",
-                                        );
-                                      }
-
-                                      return (
-                                        <div
-                                          key={dateStr}
-                                          className="border-border/70 relative my-4 border-t pt-1 first:mt-2 first:border-t-0"
-                                        >
-                                          <span
-                                            className="bg-background text-muted-foreground absolute -top-2.5 left-0 flex h-5 items-center pe-2 text-[10px] uppercase data-today:font-semibold sm:text-xs"
-                                            data-today={
-                                              isToday(groupStartDate) ||
-                                              undefined
-                                            }
-                                          >
-                                            {dateDisplayString}
-                                          </span>
-                                          <div className="mt-4 space-y-2">
-                                            {dayEvents.map(
-                                              (event: CalendarEvent) => (
-                                                <div
-                                                  key={event.id}
-                                                  className="flex h-full gap-2"
-                                                >
-                                                  {!event.allDay &&
-                                                    (event.start ||
-                                                      event.end) && (
-                                                      <div className="flex w-12 flex-shrink-0 flex-col items-end justify-between py-1 text-xs">
-                                                        <p>
-                                                          {event.start
-                                                            ? formatEventTimeDisplay(
-                                                                new Date(
-                                                                  event.start,
-                                                                ).toISOString(),
-                                                              )
-                                                            : ""}
-                                                        </p>
-                                                        <p>
-                                                          {event.end
-                                                            ? formatEventTimeDisplay(
-                                                                new Date(
-                                                                  event.end,
-                                                                ).toISOString(),
-                                                              )
-                                                            : ""}
-                                                        </p>
-                                                      </div>
-                                                    )}
-                                                  <EventItem
-                                                    key={event.id || nanoid()}
-                                                    onClick={() =>
-                                                      console.log(
-                                                        "Event clicked in chat:",
-                                                        event,
-                                                      )
-                                                    }
-                                                    event={event}
-                                                    view="agenda"
-                                                  />
-                                                </div>
-                                              ),
-                                            )}
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                )
-                              ) : (
-                                <p className="pl-6 text-sm text-gray-500 dark:text-gray-400">
-                                  No events found.
-                                </p>
-                              )}
-                            </div>
+                              toolInvocation={toolInvocation}
+                            />
                           );
                         }
                       }
 
                       if (toolInvocation.toolName === "createEvent") {
                         if (toolInvocation.state === "call") {
-                          const eventDetails = toolInvocation.args;
-
-                          return (
-                            <div
-                              key={toolCallId}
-                              className="flex flex-col gap-2 px-2 py-3"
-                            >
-                              <div className="flex items-center gap-2">
-                                <CalendarDays className="h-4 w-4 text-gray-500" />
-                                <p className="font-medium text-gray-700 dark:text-gray-300">
-                                  Creating Calendar Event
-                                </p>
-                              </div>
-                            </div>
-                          );
+                          return <CreateEventCall key={toolCallId} />;
                         }
 
                         if (toolInvocation.state === "result") {
-                          const result = toolInvocation.result;
-
-                          if (result.error) {
-                            return (
-                              <div
-                                key={toolCallId}
-                                className="flex flex-col gap-2 px-2 py-3"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <CalendarDays className="h-4 w-4 text-gray-500" />
-                                  <p className="font-medium text-gray-700 dark:text-gray-300">
-                                    Event Creation Failed
-                                  </p>
-                                </div>
-                                <div className="mt-2 rounded-md border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-900/20">
-                                  <p className="text-sm text-red-600 dark:text-red-400">
-                                    {result.error}
-                                  </p>
-                                </div>
-                              </div>
-                            );
-                          }
-
-                          const event = result.event;
-                          const startDate = new Date(event.start);
-                          const endDate = new Date(event.end);
-
                           return (
-                            <div
+                            <CreateEventResult
                               key={toolCallId}
-                              className="flex flex-col gap-2 px-2 py-3"
-                            >
-                              <div className="flex items-center gap-2">
-                                <CalendarDays className="h-4 w-4 text-gray-500" />
-                                <p className="font-medium text-gray-700 dark:text-gray-300">
-                                  Event Created Successfully
-                                </p>
-                              </div>
-                              <div className="mt-2 flex flex-col space-y-2">
-                                <div className="flex h-full gap-2">
-                                  {!event.allDay && (
-                                    <div className="flex w-12 flex-shrink-0 flex-col items-end justify-between py-1 text-xs">
-                                      <p>
-                                        {formatEventTimeDisplay(
-                                          startDate.toISOString(),
-                                        )}
-                                      </p>
-                                      <p>
-                                        {formatEventTimeDisplay(
-                                          endDate.toISOString(),
-                                        )}
-                                      </p>
-                                    </div>
-                                  )}
-                                  <EventItem
-                                    onClick={() =>
-                                      console.log(
-                                        "Event clicked in chat:",
-                                        event,
-                                      )
-                                    }
-                                    event={event}
-                                    view="agenda"
-                                  />
-                                </div>
-                              </div>
-                            </div>
+                              toolInvocation={toolInvocation}
+                            />
                           );
                         }
                       }
 
                       if (toolInvocation.toolName === "updateEvent") {
                         if (toolInvocation.state === "call") {
-                          const updateDetails = toolInvocation.args;
-                          const originalStartTime =
-                            updateDetails.originalStartTime;
-                          const originalEndTime = updateDetails.originalEndTime;
-                          const newStartTime = updateDetails.newStartTime;
-                          const newEndTime = updateDetails.newEndTime;
-
                           return (
-                            <div
+                            <UpdateEventCall
                               key={toolCallId}
-                              className="flex flex-col gap-2 px-2 py-3"
-                            >
-                              <div className="flex items-center gap-2">
-                                <CalendarDays className="h-4 w-4 text-gray-500" />
-                                <p className="font-medium text-gray-700 dark:text-gray-300">
-                                  Updating Calendar Event
-                                </p>
-                              </div>
-
-                              {(originalStartTime || originalEndTime) && (
-                                <div className="mt-2 border-l-2 border-gray-200 pl-3 dark:border-gray-700">
-                                  <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">
-                                    Before:
-                                  </p>
-                                  <div className="flex items-center gap-2">
-                                    {originalStartTime && originalEndTime && (
-                                      <div className="flex w-24 flex-shrink-0 flex-col items-end text-xs text-gray-500">
-                                        <p>
-                                          {originalStartTime && newStartTime && 
-                                            formatEventDateTime(originalStartTime, datesAreDifferent(originalStartTime, newStartTime))}
-                                        </p>
-                                        <p>
-                                          {originalEndTime && newEndTime && 
-                                            formatEventDateTime(originalEndTime, datesAreDifferent(originalEndTime, newEndTime))}
-                                        </p>
-                                      </div>
-                                    )}
-                                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                                      {updateDetails.summary || "Event"}
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-
-                              {(newStartTime || newEndTime) && (
-                                <div className="mt-2 border-l-2 border-green-300 pl-3 dark:border-green-700">
-                                  <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">
-                                    After:
-                                  </p>
-                                  <div className="flex items-center gap-2">
-                                    {newStartTime && newEndTime && (
-                                      <div className="flex w-24 flex-shrink-0 flex-col items-end text-xs text-gray-500">
-                                        <p>
-                                          {originalStartTime && newStartTime && 
-                                            formatEventDateTime(newStartTime, datesAreDifferent(originalStartTime, newStartTime))}
-                                        </p>
-                                        <p>
-                                          {originalEndTime && newEndTime && 
-                                            formatEventDateTime(newEndTime, datesAreDifferent(originalEndTime, newEndTime))}
-                                        </p>
-                                      </div>
-                                    )}
-                                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                                      {updateDetails.summary || "Event"}
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
+                              toolInvocation={toolInvocation}
+                            />
                           );
                         }
 
                         if (toolInvocation.state === "result") {
-                          const result = toolInvocation.result;
-
-                          if (result.error) {
-                            return (
-                              <div
-                                key={toolCallId}
-                                className="flex flex-col gap-2 px-2 py-3"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <CalendarDays className="h-4 w-4 text-gray-500" />
-                                  <p className="font-medium text-gray-700 dark:text-gray-300">
-                                    Event Update Failed
-                                  </p>
-                                </div>
-                                <div className="mt-2 rounded-md border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-900/20">
-                                  <p className="text-sm text-red-600 dark:text-red-400">
-                                    {result.error}
-                                  </p>
-                                </div>
-                              </div>
-                            );
-                          }
-
-                          let originalDateInfo = "";
-                          if (message.parts) {
-                            for (let i = 0; i < message.parts.length; i++) {
-                              const part = message.parts[i];
-                              if (
-                                part?.type === "text" &&
-                                part.text.includes("Moved from")
-                              ) {
-                                const match = part.text.match(
-                                  /Moved from (.*?) to (.*?),/,
-                                );
-                                if (match && match[1]) {
-                                  originalDateInfo = match[1];
-                                  break;
-                                }
-                              }
-                            }
-                          }
-
-                          const event = result.event;
-                          const startDate = new Date(event.start);
-                          const endDate = new Date(event.end);
-
                           return (
-                            <div
+                            <UpdateEventResult
                               key={toolCallId}
-                              className="flex flex-col gap-2 px-2 py-3"
-                            >
-                              <div className="flex items-center gap-2">
-                                <CalendarDays className="h-4 w-4 text-gray-500" />
-                                <p className="font-medium text-gray-700 dark:text-gray-300">
-                                  Event Updated Successfully
-                                </p>
-                              </div>
-
-                              {originalDateInfo && (
-                                <div className="mt-2 border-l-2 border-gray-200 pl-3 dark:border-gray-700">
-                                  <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">
-                                    Previous:
-                                  </p>
-                                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                                    {originalDateInfo}
-                                  </div>
-                                </div>
-                              )}
-
-                              <div className="mt-2 border-l-2 border-green-300 pl-3 dark:border-green-700">
-                                <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">
-                                  Updated: {originalDateInfo && 
-                                    <span className="text-green-600 dark:text-green-400">
-                                      {format(startDate, "MMM d, yyyy")}
-                                    </span>
-                                  }
-                                </p>
-                                <div className="flex h-full gap-2">
-                                  {!event.allDay && (
-                                    <div className="flex w-12 flex-shrink-0 flex-col items-end justify-between py-1 text-xs">
-                                      <p>
-                                        {formatEventTimeDisplay(startDate.toISOString())}
-                                      </p>
-                                      <p>
-                                        {formatEventTimeDisplay(endDate.toISOString())}
-                                      </p>
-                                    </div>
-                                  )}
-                                  <EventItem
-                                    onClick={() =>
-                                      console.log(
-                                        "Event clicked in chat:",
-                                        event,
-                                      )
-                                    }
-                                    event={event}
-                                    view="agenda"
-                                  />
-                                </div>
-                              </div>
-                            </div>
+                              message={message}
+                              toolInvocation={toolInvocation}
+                            />
                           );
                         }
                       }
 
                       if (toolInvocation.toolName === "getNextUpcomingEvent") {
                         if (toolInvocation.state === "call") {
-                          return (
-                            <div
-                              key={toolCallId}
-                              className="flex items-center gap-2 p-2"
-                            >
-                              <CalendarDays className="h-4 w-4 text-gray-500" />
-                              <p className="font-medium text-gray-700 dark:text-gray-300">
-                                Getting next upcoming event...
-                              </p>
-                            </div>
-                          );
+                          return <GetUpcomingEventCall key={toolCallId} />;
                         }
 
                         if (toolInvocation.state === "result") {
-                          const {
-                            event,
-                            minutesToStart,
-                            status: eventStatus,
-                          } = toolInvocation.result as {
-                            event: CalendarEvent;
-                            minutesToStart: number;
-                            status: string;
-                          };
-
-                          if (!event) {
-                            return (
-                              <div
-                                key={toolCallId}
-                                className="flex flex-col gap-2 px-2 py-3"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <CalendarDays className="h-4 w-4 text-gray-500" />
-                                  <p className="font-medium text-gray-700 dark:text-gray-300">
-                                    Next Upcoming Event
-                                  </p>
-                                </div>
-                                <p className="pl-6 text-sm text-gray-500 dark:text-gray-400">
-                                  No upcoming event found.
-                                </p>
-                              </div>
-                            );
-                          }
-
-                          let statusText = "";
-                          if (eventStatus === "upcoming") {
-                            statusText =
-                              formatPreciseUpcomingStatusText(minutesToStart);
-                          } else if (eventStatus === "ongoing") {
-                            statusText = "Ongoing";
-                          }
-
                           return (
-                            <div
+                            <GetUpcomingEventResult
                               key={toolCallId}
-                              className="flex flex-col gap-3 px-2 py-3"
-                            >
-                              <div className="flex items-center gap-2">
-                                <CalendarDays className="h-4 w-4 text-gray-500" />
-                                <p className="font-medium text-gray-700 dark:text-gray-300">
-                                  Next Upcoming Event
-                                </p>
-                              </div>
-                              <div className="flex h-full gap-2">
-                                {!event.allDay &&
-                                  (event.start || event.end) && (
-                                    <div className="flex w-12 flex-shrink-0 flex-col items-end justify-between py-1 text-xs">
-                                      <p>
-                                        {event.start
-                                          ? formatEventTimeDisplay(
-                                              new Date(
-                                                event.start,
-                                              ).toISOString(),
-                                            )
-                                          : ""}
-                                      </p>
-                                      <p>
-                                        {event.end
-                                          ? formatEventTimeDisplay(
-                                              new Date(event.end).toISOString(),
-                                            )
-                                          : ""}
-                                      </p>
-                                    </div>
-                                  )}
-                                <EventItem
-                                  onClick={() =>
-                                    console.log("Event clicked in chat:", event)
-                                  }
-                                  event={event}
-                                  view="agenda"
-                                />
-                              </div>
-                              {statusText && (
-                                <p className="text-sm text-gray-600 dark:text-gray-400">
-                                  {statusText}
-                                </p>
-                              )}
-                            </div>
+                              toolInvocation={toolInvocation}
+                            />
                           );
                         }
                       }
