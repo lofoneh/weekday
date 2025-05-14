@@ -96,6 +96,8 @@ export function ChatSidebar() {
                         part.toolInvocation as ToolInvocation;
                       const toolCallId = toolInvocation.toolCallId;
 
+                      console.log(toolInvocation);
+
                       if (toolInvocation.toolName === "readDocument") {
                         return (
                           <div

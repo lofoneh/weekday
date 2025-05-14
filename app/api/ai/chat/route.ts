@@ -4,7 +4,7 @@ import { v7 as uuidv7 } from "uuid";
 
 import { env } from "@/env";
 import { systemPrompt } from "@/lib/ai/system-prompt";
-import { getEvents } from "@/lib/ai/tools";
+import { getEvents, getNextUpcomingEvent } from "@/lib/ai/tools";
 
 export const maxDuration = 30;
 
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
       messages,
       model: openrouter.chat("google/gemini-2.5-flash-preview"),
       system: systemPrompt({ currentDate, formattedDate }),
-      tools: { getEvents },
+      tools: { getEvents, getNextUpcomingEvent },
     });
 
     return result.toDataStreamResponse();

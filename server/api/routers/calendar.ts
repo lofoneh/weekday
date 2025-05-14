@@ -201,6 +201,8 @@ export const calendarRouter = createTRPCRouter({
       z
         .object({
           calendarIds: z.array(z.string()).optional(),
+          includeAllDay: z.boolean().optional().default(true),
+          maxResults: z.number().int().positive().optional(),
           timeMax: z.string().optional(),
           timeMin: z.string().optional(),
         })
@@ -257,7 +259,7 @@ export const calendarRouter = createTRPCRouter({
 
         const fetchPromises = calendarsToFetch.map(async (calendar) => {
           const params = new URLSearchParams({
-            maxResults: "2500",
+            maxResults: input?.maxResults?.toString() ?? "2500",
             orderBy: "startTime",
             singleEvents: "true",
             timeMax: timeMaxISO,
@@ -294,8 +296,14 @@ export const calendarRouter = createTRPCRouter({
         });
 
         const results = await Promise.all(fetchPromises);
+        let flatResults = results.flat();
 
-        return results.flat();
+        // Filter out all-day events only if includeAllDay is explicitly false
+        if (input?.includeAllDay === false) {
+          flatResults = flatResults.filter((event) => !event.allDay);
+        }
+
+        return flatResults;
       } catch (error) {
         console.error("Error fetching calendar events:", error);
         throw error;
