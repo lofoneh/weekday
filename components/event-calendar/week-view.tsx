@@ -72,11 +72,9 @@ export function WeekView({
     });
   }, [currentDate]);
 
-  // Get all-day events and multi-day events for the week
   const allDayEvents = useMemo(() => {
     return events
       .filter((event) => {
-        // Include explicitly marked all-day events or multi-day events
         return event.allDay || isMultiDayEvent(event);
       })
       .filter((event) => {
@@ -91,18 +89,14 @@ export function WeekView({
       });
   }, [events, days]);
 
-  // Process events for each day to calculate positions
   const processedDayEvents = useMemo(() => {
     const result = days.map((day) => {
-      // Get events for this day that are not all-day events or multi-day events
       const dayEvents = events.filter((event) => {
-        // Skip all-day events and multi-day events
         if (event.allDay || isMultiDayEvent(event)) return false;
 
         const eventStart = new Date(event.start);
         const eventEnd = new Date(event.end);
 
-        // Check if event is on this day
         return (
           isSameDay(day, eventStart) ||
           isSameDay(day, eventEnd) ||
@@ -110,35 +104,29 @@ export function WeekView({
         );
       });
 
-      // Sort events by start time and duration
       const sortedEvents = [...dayEvents].sort((a, b) => {
         const aStart = new Date(a.start);
         const bStart = new Date(b.start);
         const aEnd = new Date(a.end);
         const bEnd = new Date(b.end);
 
-        // First sort by start time
         if (aStart < bStart) return -1;
         if (aStart > bStart) return 1;
 
-        // If start times are equal, sort by duration (longer events first)
         const aDuration = differenceInMinutes(aEnd, aStart);
         const bDuration = differenceInMinutes(bEnd, bStart);
         return bDuration - aDuration;
       });
 
-      // Calculate positions for each event
       const positionedEvents: PositionedEvent[] = [];
       const dayStart = startOfDay(day);
 
-      // Track columns for overlapping events
-      const columns: { end: Date; event: CalendarEvent; }[][] = [];
+      const columns: { end: Date; event: CalendarEvent }[][] = [];
 
       sortedEvents.forEach((event) => {
         const eventStart = new Date(event.start);
         const eventEnd = new Date(event.end);
 
-        // Adjust start and end times if they're outside this day
         const adjustedStart = isSameDay(day, eventStart)
           ? eventStart
           : dayStart;
@@ -146,16 +134,13 @@ export function WeekView({
           ? eventEnd
           : addHours(dayStart, 24);
 
-        // Calculate top position and height
         const startHour =
           getHours(adjustedStart) + getMinutes(adjustedStart) / 60;
         const endHour = getHours(adjustedEnd) + getMinutes(adjustedEnd) / 60;
 
-        // Adjust the top calculation to account for the new start time
         const top = (startHour - StartHour) * WeekCellsHeight;
-        const height = (endHour - startHour) * WeekCellsHeight;
+        const height = (endHour - startHour) * WeekCellsHeight - 3;
 
-        // Find a column for this event
         let columnIndex = 0;
         let placed = false;
 
@@ -182,12 +167,10 @@ export function WeekView({
           }
         }
 
-        // Ensure column is initialized before pushing
         const currentColumn = columns[columnIndex] || [];
         columns[columnIndex] = currentColumn;
         currentColumn.push({ end: adjustedEnd, event });
 
-        // Calculate width and left position based on number of columns
         const width = columnIndex === 0 ? 1 : 0.9;
         const left = columnIndex === 0 ? 0 : columnIndex * 0.1;
 
@@ -197,7 +180,7 @@ export function WeekView({
           left,
           top,
           width,
-          zIndex: 10 + columnIndex, // Higher columns get higher z-index
+          zIndex: 10 + columnIndex,
         });
       });
 
@@ -220,7 +203,7 @@ export function WeekView({
 
   return (
     <div className="flex h-full flex-col" data-slot="week-view">
-      <div className="bg-background/80 border-border/70 sticky top-0 z-30 grid grid-cols-8 border-y backdrop-blur-md uppercase">
+      <div className="bg-background/80 border-border/70 sticky top-0 z-30 grid grid-cols-8 border-y uppercase backdrop-blur-md">
         <div className="text-muted-foreground/70 py-2 text-center text-xs">
           <span className="max-[479px]:sr-only">{format(new Date(), "O")}</span>
         </div>
@@ -269,7 +252,6 @@ export function WeekView({
                     const isFirstDay = isSameDay(day, eventStart);
                     const isLastDay = isSameDay(day, eventEnd);
 
-                    // Check if this is the first day in the current week view
                     const isFirstVisibleDay =
                       dayIndex === 0 && isBefore(eventStart, weekStart);
                     const shouldShowTitle = isFirstDay || isFirstVisibleDay;
@@ -283,7 +265,6 @@ export function WeekView({
                         isLastDay={isLastDay}
                         view="month"
                       >
-                        {/* Show title if it's the first day of the event or the first visible day in the week */}
                         <div
                           className={cn(
                             "truncate",
@@ -304,11 +285,11 @@ export function WeekView({
       )}
 
       <div className="grid flex-1 grid-cols-8 overflow-hidden">
-        <div className="border-border/70 border-r grid auto-cols-fr">
+        <div className="border-border/70 border-r">
           {hours.map((hour, index) => (
             <div
               key={hour.toString()}
-              className="border-border/70 relative min-h-[var(--week-cells-height)] border-b last:border-b-0"
+              className="border-border/70 relative h-[var(--week-cells-height)] border-b last:border-b-0"
             >
               {index > 0 && (
                 <span className="bg-background text-muted-foreground/70 absolute -top-3 left-0 flex h-6 w-16 max-w-full items-center justify-end pe-2 text-[10px] sm:pe-4 sm:text-xs">
@@ -322,18 +303,17 @@ export function WeekView({
         {days.map((day, dayIndex) => (
           <div
             key={day.toString()}
-            className="border-border/70 relative border-r last:border-r-0 grid auto-cols-fr"
+            className="border-border/70 relative border-r last:border-r-0"
             data-today={isToday(day) || undefined}
           >
-            {/* Positioned events */}
             {(processedDayEvents[dayIndex] ?? []).map((positionedEvent) => (
               <div
                 key={positionedEvent.event.id}
-                className="absolute z-10 px-0.5"
+                className="absolute z-10 px-px"
                 style={{
                   height: `${positionedEvent.height}px`,
                   left: `${positionedEvent.left * 100}%`,
-                  top: `${positionedEvent.top}px`,
+                  top: `${positionedEvent.top + 1}px`,
                   width: `${positionedEvent.width * 100}%`,
                   zIndex: positionedEvent.zIndex,
                 }}
@@ -351,26 +331,25 @@ export function WeekView({
               </div>
             ))}
 
-            {/* Current time indicator - only show for today's column */}
             {currentTimeVisible && isToday(day) && (
               <div
                 className="pointer-events-none absolute right-0 left-0 z-20"
                 style={{ top: `${currentTimePosition}%` }}
               >
                 <div className="relative flex items-center">
-                  <div className="bg-red-500 absolute -left-1 h-2 w-2 rounded-full"></div>
-                  <div className="bg-red-500 h-[2px] w-full"></div>
+                  <div className="absolute -left-1 h-2 w-2 rounded-full bg-red-500"></div>
+                  <div className="h-[2px] w-full bg-red-500"></div>
                 </div>
               </div>
             )}
+
             {hours.map((hour) => {
               const hourValue = getHours(hour);
               return (
                 <div
                   key={hour.toString()}
-                  className="border-border/70 relative min-h-[var(--week-cells-height)] border-b last:border-b-0"
+                  className="border-border/70 relative h-[var(--week-cells-height)] border-b last:border-b-0"
                 >
-                  {/* Quarter-hour intervals */}
                   {[0, 1, 2, 3].map((quarter) => {
                     const quarterHourTime = hourValue + quarter * 0.25;
                     return (
