@@ -148,8 +148,7 @@ export const calendarRouter = createTRPCRouter({
 
       try {
         await executeRequest(url, options, account, ctx.session.user.id);
-        // For successful DELETE operations, Google Calendar API returns an empty response
-        // with 204 No Content status
+
         return true;
       } catch (error) {
         console.error("Error deleting event:", error);
@@ -216,6 +215,7 @@ export const calendarRouter = createTRPCRouter({
         throw error;
       }
     }),
+
   getEvent: protectedProcedure
     .input(
       z.object({
