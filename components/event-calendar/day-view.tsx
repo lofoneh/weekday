@@ -287,14 +287,10 @@ export function DayView({
                         quarter === 3 &&
                           "top-[calc(var(--week-cells-height)/4*3)]",
                       )}
-                      onClick={() => {
-                        const startTime = new Date(currentDate);
-                        startTime.setHours(hourValue);
-                        startTime.setMinutes(quarter * 15);
-                        onEventCreate(startTime);
-                      }}
-                      date={currentDate}
-                      time={quarterHourTime}
+                      onEventCreate={onEventCreate}
+                      baseDate={currentDate}
+                      hourInDay={hourValue}
+                      quarterInHour={quarter}
                     />
                   );
                 })}

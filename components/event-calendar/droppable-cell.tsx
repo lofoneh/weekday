@@ -1,5 +1,7 @@
 "use client";
 
+import React, { useCallback, useMemo } from "react";
+
 import { useDroppable } from "@dnd-kit/core";
 
 import { useCalendarDnd } from "@/components/event-calendar";
@@ -7,51 +9,83 @@ import { cn } from "@/lib/utils";
 
 interface DroppableCellProps {
   id: string;
-  date: Date;
+  baseDate: Date;
+  hourInDay: number;
+  quarterInHour: number;
+  onEventCreate: (startTime: Date) => void;
   children?: React.ReactNode;
   className?: string;
-  time?: number; // For week/day views, represents hours (e.g., 9.25 for 9:15)
-  onClick?: () => void;
 }
 
-export function DroppableCell({
+// Separate component that consumes the context to prevent re-renders
+const DroppableCellInner = React.memo(function DroppableCellInner({
   id,
+  baseDate,
   children,
   className,
-  date,
-  time,
-  onClick,
-}: DroppableCellProps) {
-  const { activeEvent } = useCalendarDnd();
+  hourInDay,
+  isActiveEvent,
+  quarterInHour,
+  onEventCreate,
+}: DroppableCellProps & { isActiveEvent: boolean }) {
+  // Optimize data object to prevent unnecessary re-creation
+  const dropData = useMemo(() => {
+    return {
+      date: baseDate,
+      time: hourInDay + quarterInHour * 0.25,
+    };
+  }, [baseDate, hourInDay, quarterInHour]);
 
   const { isOver, setNodeRef } = useDroppable({
     id,
-    data: {
-      date,
-      time,
-    },
+    data: dropData,
   });
 
-  // Format time for display in tooltip (only for debugging)
-  const formattedTime =
-    time !== undefined
-      ? `${Math.floor(time)}:${Math.round((time - Math.floor(time)) * 60)
-          .toString()
-          .padStart(2, "0")}`
-      : null;
+  // Memoize the click handler to prevent recreation on each render
+  const handleClick = useCallback(() => {
+    const startTime = new Date(baseDate);
+    startTime.setHours(hourInDay);
+    startTime.setMinutes(quarterInHour * 15);
+    onEventCreate(startTime);
+  }, [baseDate, hourInDay, quarterInHour, onEventCreate]);
+
+  // Only calculate classes once per render
+  const cellClasses = useMemo(() => {
+    return cn(
+      "flex h-full flex-col px-0.5 py-1 sm:px-1",
+      isOver && isActiveEvent ? "bg-accent" : "",
+      className,
+    );
+  }, [className, isOver, isActiveEvent]);
+
+  // Memoize title for consistency
+  const title = useMemo(() => {
+    return `${Math.floor(hourInDay)}:${Math.round(quarterInHour * 15)
+      .toString()
+      .padStart(2, "0")}`;
+  }, [hourInDay, quarterInHour]);
 
   return (
     <div
       ref={setNodeRef}
-      className={cn(
-        "data-dragging:bg-accent flex h-full flex-col px-0.5 py-1 sm:px-1",
-        className,
-      )}
-      onClick={onClick}
-      title={formattedTime ? `${formattedTime}` : undefined}
-      data-dragging={isOver && activeEvent ? true : undefined}
+      className={cellClasses}
+      onClick={handleClick}
+      title={title}
     >
       {children}
     </div>
   );
-}
+});
+
+export const DroppableCell = React.memo(function DroppableCell(
+  props: DroppableCellProps,
+) {
+  const { activeEvent } = useCalendarDnd();
+  // Create a stable isActiveEvent value
+  const isActiveEvent = useMemo(() => !!activeEvent, [activeEvent]);
+
+  return <DroppableCellInner {...props} isActiveEvent={isActiveEvent} />;
+});
+
+DroppableCellInner.displayName = "DroppableCellInner";
+DroppableCell.displayName = "DroppableCell";

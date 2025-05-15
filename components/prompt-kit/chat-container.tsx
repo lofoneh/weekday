@@ -191,6 +191,7 @@ function ChatContainer({
 
     prevChildrenCountRef.current = currentChildrenCount;
     prevChildrenRef.current = children;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [children, setNewMessageAdded]);
 
   useEffect(() => {

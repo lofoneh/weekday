@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 
 import {
   addHours,
@@ -47,7 +47,7 @@ interface WeekViewProps {
   onEventSelect: (event: CalendarEvent) => void;
 }
 
-export function WeekView({
+export const WeekView = React.memo(function WeekView({
   currentDate,
   events,
   onEventCreate,
@@ -190,16 +190,202 @@ export function WeekView({
     return result;
   }, [days, events]);
 
-  const handleEventClick = (event: CalendarEvent, e: React.MouseEvent) => {
-    e.stopPropagation();
-    onEventSelect(event);
-  };
+  const handleEventClick = useCallback(
+    (event: CalendarEvent, e: React.MouseEvent) => {
+      e.stopPropagation();
+      onEventSelect(event);
+    },
+    [onEventSelect],
+  );
+
+  const getEventClickHandler = useCallback(
+    (event: CalendarEvent) => {
+      return (e: React.MouseEvent) => handleEventClick(event, e);
+    },
+    [handleEventClick],
+  );
+
+  const memoizedEventCreate = useCallback(
+    (startTime: Date) => {
+      onEventCreate(startTime);
+    },
+    [onEventCreate],
+  );
 
   const showAllDaySection = allDayEvents.length > 0;
   const { currentTimePosition, currentTimeVisible } = useCurrentTimeIndicator(
     currentDate,
     "week",
   );
+
+  const renderCellQuarters = useCallback(
+    (hour: Date, day: Date) => {
+      const hourValue = getHours(hour);
+
+      return [0, 1, 2, 3].map((quarter) => {
+        const quarterHourTime = hourValue + quarter * 0.25;
+        const cellId = `week-cell-${day.toISOString()}-${quarterHourTime}`;
+        const cellClassName = cn(
+          "absolute h-[calc(var(--week-cells-height)/4)] w-full",
+          quarter === 0 && "top-0",
+          quarter === 1 && "top-[calc(var(--week-cells-height)/4)]",
+          quarter === 2 && "top-[calc(var(--week-cells-height)/4*2)]",
+          quarter === 3 && "top-[calc(var(--week-cells-height)/4*3)]",
+        );
+
+        return (
+          <DroppableCell
+            id={cellId}
+            key={`${hour.toString()}-${quarter}`}
+            className={cellClassName}
+            onEventCreate={memoizedEventCreate}
+            baseDate={day}
+            hourInDay={hourValue}
+            quarterInHour={quarter}
+          />
+        );
+      });
+    },
+    [memoizedEventCreate],
+  );
+
+  const renderPositionedEvents = useCallback(
+    (dayIndex: number, day: Date) => {
+      return (processedDayEvents[dayIndex] ?? []).map((positionedEvent) => (
+        <div
+          key={positionedEvent.event.id}
+          className="absolute z-10 px-px"
+          style={{
+            height: `${positionedEvent.height}px`,
+            left: `${positionedEvent.left * 100}%`,
+            top: `${positionedEvent.top + 1}px`,
+            width: `${positionedEvent.width * 100}%`,
+            zIndex: positionedEvent.zIndex,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="h-full w-full">
+            <DraggableEvent
+              onClick={getEventClickHandler(positionedEvent.event)}
+              event={positionedEvent.event}
+              height={positionedEvent.height}
+              view="week"
+              showTime
+            />
+          </div>
+        </div>
+      ));
+    },
+    [processedDayEvents, getEventClickHandler],
+  );
+
+  const renderAllDayEvents = useCallback(
+    (day: Date, dayIndex: number) => {
+      const dayAllDayEvents = allDayEvents.filter((event) => {
+        const eventStart = new Date(event.start);
+        const eventEnd = new Date(event.end);
+        return (
+          isSameDay(day, eventStart) ||
+          (day > eventStart && day < eventEnd) ||
+          isSameDay(day, eventEnd)
+        );
+      });
+
+      return dayAllDayEvents.map((event) => {
+        const eventStart = new Date(event.start);
+        const eventEnd = new Date(event.end);
+        const isFirstDay = isSameDay(day, eventStart);
+        const isLastDay = isSameDay(day, eventEnd);
+        const isFirstVisibleDay =
+          dayIndex === 0 && isBefore(eventStart, weekStart);
+        const shouldShowTitle = isFirstDay || isFirstVisibleDay;
+
+        return (
+          <EventItem
+            key={`spanning-${event.id}`}
+            onClick={getEventClickHandler(event)}
+            event={event}
+            isFirstDay={isFirstDay}
+            isLastDay={isLastDay}
+            view="month"
+          >
+            <div
+              className={cn("truncate", !shouldShowTitle && "invisible")}
+              aria-hidden={!shouldShowTitle}
+            >
+              {event.title}
+            </div>
+          </EventItem>
+        );
+      });
+    },
+    [allDayEvents, getEventClickHandler, weekStart],
+  );
+
+  const droppableCellsGrid = useMemo(() => {
+    return days.map((day, dayIndex) => (
+      <div
+        key={day.toString()}
+        className="border-border/70 relative border-r last:border-r-0"
+        data-today={isToday(day) || undefined}
+      >
+        {renderPositionedEvents(dayIndex, day)}
+
+        {currentTimeVisible && isToday(day) && (
+          <div
+            className="pointer-events-none absolute right-0 left-0 z-20"
+            style={{ top: `${currentTimePosition}%` }}
+          >
+            <div className="relative flex items-center">
+              <div className="absolute -left-1 h-2 w-2 rounded-full bg-red-500"></div>
+              <div className="h-[2px] w-full bg-red-500"></div>
+            </div>
+          </div>
+        )}
+
+        {hours.map((hour) => (
+          <div
+            key={hour.toString()}
+            className="border-border/70 relative h-[var(--week-cells-height)] border-b last:border-b-0"
+          >
+            {renderCellQuarters(hour, day)}
+          </div>
+        ))}
+      </div>
+    ));
+  }, [
+    days,
+    hours,
+    currentTimeVisible,
+    currentTimePosition,
+    renderPositionedEvents,
+    renderCellQuarters,
+  ]);
+
+  const allDaySectionContent = useMemo(() => {
+    if (!showAllDaySection) return null;
+
+    return (
+      <div className="border-border/70 bg-muted/50 border-b">
+        <div className="grid grid-cols-8">
+          <div className="border-border/70 relative border-r">
+            <span className="text-muted-foreground/70 absolute bottom-0 left-0 h-6 w-16 max-w-full pe-2 text-right text-[10px] sm:pe-4 sm:text-xs">
+              All day
+            </span>
+          </div>
+          {days.map((day, dayIndex) => (
+            <div
+              key={day.toString()}
+              className="border-border/70 relative border-r p-1 last:border-r-0"
+              data-today={isToday(day) || undefined}
+            >
+              {renderAllDayEvents(day, dayIndex)}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }, [days, showAllDaySection, renderAllDayEvents]);
 
   return (
     <div className="flex h-full flex-col" data-slot="week-view">
@@ -221,68 +407,7 @@ export function WeekView({
         ))}
       </div>
 
-      {showAllDaySection && (
-        <div className="border-border/70 bg-muted/50 border-b">
-          <div className="grid grid-cols-8">
-            <div className="border-border/70 relative border-r">
-              <span className="text-muted-foreground/70 absolute bottom-0 left-0 h-6 w-16 max-w-full pe-2 text-right text-[10px] sm:pe-4 sm:text-xs">
-                All day
-              </span>
-            </div>
-            {days.map((day, dayIndex) => {
-              const dayAllDayEvents = allDayEvents.filter((event) => {
-                const eventStart = new Date(event.start);
-                const eventEnd = new Date(event.end);
-                return (
-                  isSameDay(day, eventStart) ||
-                  (day > eventStart && day < eventEnd) ||
-                  isSameDay(day, eventEnd)
-                );
-              });
-
-              return (
-                <div
-                  key={day.toString()}
-                  className="border-border/70 relative border-r p-1 last:border-r-0"
-                  data-today={isToday(day) || undefined}
-                >
-                  {dayAllDayEvents.map((event) => {
-                    const eventStart = new Date(event.start);
-                    const eventEnd = new Date(event.end);
-                    const isFirstDay = isSameDay(day, eventStart);
-                    const isLastDay = isSameDay(day, eventEnd);
-
-                    const isFirstVisibleDay =
-                      dayIndex === 0 && isBefore(eventStart, weekStart);
-                    const shouldShowTitle = isFirstDay || isFirstVisibleDay;
-
-                    return (
-                      <EventItem
-                        key={`spanning-${event.id}`}
-                        onClick={(e) => handleEventClick(event, e)}
-                        event={event}
-                        isFirstDay={isFirstDay}
-                        isLastDay={isLastDay}
-                        view="month"
-                      >
-                        <div
-                          className={cn(
-                            "truncate",
-                            !shouldShowTitle && "invisible",
-                          )}
-                          aria-hidden={!shouldShowTitle}
-                        >
-                          {event.title}
-                        </div>
-                      </EventItem>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {allDaySectionContent}
 
       <div className="grid flex-1 grid-cols-8 overflow-hidden">
         <div className="border-border/70 border-r">
@@ -300,89 +425,10 @@ export function WeekView({
           ))}
         </div>
 
-        {days.map((day, dayIndex) => (
-          <div
-            key={day.toString()}
-            className="border-border/70 relative border-r last:border-r-0"
-            data-today={isToday(day) || undefined}
-          >
-            {(processedDayEvents[dayIndex] ?? []).map((positionedEvent) => (
-              <div
-                key={positionedEvent.event.id}
-                className="absolute z-10 px-px"
-                style={{
-                  height: `${positionedEvent.height}px`,
-                  left: `${positionedEvent.left * 100}%`,
-                  top: `${positionedEvent.top + 1}px`,
-                  width: `${positionedEvent.width * 100}%`,
-                  zIndex: positionedEvent.zIndex,
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="h-full w-full">
-                  <DraggableEvent
-                    onClick={(e) => handleEventClick(positionedEvent.event, e)}
-                    event={positionedEvent.event}
-                    height={positionedEvent.height}
-                    view="week"
-                    showTime
-                  />
-                </div>
-              </div>
-            ))}
-
-            {currentTimeVisible && isToday(day) && (
-              <div
-                className="pointer-events-none absolute right-0 left-0 z-20"
-                style={{ top: `${currentTimePosition}%` }}
-              >
-                <div className="relative flex items-center">
-                  <div className="absolute -left-1 h-2 w-2 rounded-full bg-red-500"></div>
-                  <div className="h-[2px] w-full bg-red-500"></div>
-                </div>
-              </div>
-            )}
-
-            {hours.map((hour) => {
-              const hourValue = getHours(hour);
-              return (
-                <div
-                  key={hour.toString()}
-                  className="border-border/70 relative h-[var(--week-cells-height)] border-b last:border-b-0"
-                >
-                  {[0, 1, 2, 3].map((quarter) => {
-                    const quarterHourTime = hourValue + quarter * 0.25;
-                    return (
-                      <DroppableCell
-                        id={`week-cell-${day.toISOString()}-${quarterHourTime}`}
-                        key={`${hour.toString()}-${quarter}`}
-                        className={cn(
-                          "absolute h-[calc(var(--week-cells-height)/4)] w-full",
-                          quarter === 0 && "top-0",
-                          quarter === 1 &&
-                            "top-[calc(var(--week-cells-height)/4)]",
-                          quarter === 2 &&
-                            "top-[calc(var(--week-cells-height)/4*2)]",
-                          quarter === 3 &&
-                            "top-[calc(var(--week-cells-height)/4*3)]",
-                        )}
-                        onClick={() => {
-                          const startTime = new Date(day);
-                          startTime.setHours(hourValue);
-                          startTime.setMinutes(quarter * 15);
-                          onEventCreate(startTime);
-                        }}
-                        date={day}
-                        time={quarterHourTime}
-                      />
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-        ))}
+        {droppableCellsGrid}
       </div>
     </div>
   );
-}
+});
+
+WeekView.displayName = "WeekView";

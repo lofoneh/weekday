@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 
 import type { DraggableAttributes } from "@dnd-kit/core";
 import type { SyntheticListenerMap } from "@dnd-kit/core/dist/hooks/utilities";
@@ -39,51 +39,99 @@ interface EventItemProps {
   onTouchStart?: (e: React.TouchEvent) => void;
 }
 
-// Shared wrapper component for event styling
-function EventWrapper({
-  children,
-  className,
-  currentTime,
-  dndAttributes,
-  dndListeners,
-  event,
-  isDragging,
-  isFirstDay = true,
-  isLastDay = true,
-  onClick,
-  onMouseDown,
-  onTouchStart,
-}: EventWrapperProps) {
-  // Always use the currentTime (if provided) to determine if the event is in the past
-  const displayEnd = currentTime
-    ? new Date(
+// Create a memoized version of border and color classes to prevent recalculation
+const useCachedClassNames = (
+  event: CalendarEvent,
+  isFirstDay: boolean = true,
+  isLastDay: boolean = true,
+) => {
+  return useMemo(() => {
+    return {
+      borderClasses: getBorderRadiusClasses(isFirstDay, isLastDay),
+      colorClasses: getEventColorClasses(event.color),
+    };
+  }, [event.color, isFirstDay, isLastDay]);
+};
+
+// Shared wrapper component for event styling with enhanced memoization
+const EventWrapper = React.memo(
+  function EventWrapper({
+    children,
+    className,
+    currentTime,
+    dndAttributes,
+    dndListeners,
+    event,
+    isDragging,
+    isFirstDay = true,
+    isLastDay = true,
+    onClick,
+    onMouseDown,
+    onTouchStart,
+  }: EventWrapperProps) {
+    // Get cached class names
+    const { borderClasses, colorClasses } = useCachedClassNames(
+      event,
+      isFirstDay,
+      isLastDay,
+    );
+
+    // Always use the currentTime (if provided) to determine if the event is in the past
+    const displayEnd = useMemo(() => {
+      if (!currentTime) return new Date(event.end);
+
+      return new Date(
         new Date(currentTime).getTime() +
           (new Date(event.end).getTime() - new Date(event.start).getTime()),
-      )
-    : new Date(event.end);
+      );
+    }, [currentTime, event.end, event.start]);
 
-  const isEventInPast = isPast(displayEnd);
+    const isEventInPast = useMemo(() => isPast(displayEnd), [displayEnd]);
 
-  return (
-    <button
-      className={cn(
-        "focus-visible:border-ring focus-visible:ring-ring/50 flex h-full w-full overflow-hidden px-1 text-left font-medium backdrop-blur-md transition outline-none select-none focus-visible:ring-[3px] data-dragging:cursor-grabbing data-dragging:shadow-lg data-past-event:line-through sm:px-2",
-        getEventColorClasses(event.color),
-        getBorderRadiusClasses(isFirstDay, isLastDay),
+    // Memoize final className to avoid recalculations
+    const buttonClassName = useMemo(() => {
+      return cn(
+        "flex h-full w-full overflow-hidden px-1 text-left font-medium backdrop-blur-md transition outline-none select-none focus-visible:ring-[3px] focus-visible:border-ring focus-visible:ring-ring/50 sm:px-2",
+        colorClasses,
+        borderClasses,
         className,
-      )}
-      onClick={onClick}
-      onMouseDown={onMouseDown}
-      onTouchStart={onTouchStart}
-      data-dragging={isDragging || undefined}
-      data-past-event={isEventInPast || undefined}
-      {...dndListeners}
-      {...dndAttributes}
-    >
-      {children}
-    </button>
-  );
-}
+        {
+          "cursor-grabbing shadow-lg": isDragging,
+          "line-through": isEventInPast,
+        },
+      );
+    }, [colorClasses, borderClasses, className, isDragging, isEventInPast]);
+
+    return (
+      <button
+        className={buttonClassName}
+        onClick={onClick}
+        onMouseDown={onMouseDown}
+        onTouchStart={onTouchStart}
+        {...dndListeners}
+        {...dndAttributes}
+      >
+        {children}
+      </button>
+    );
+  },
+  // Custom comparison function to prevent unnecessary re-renders
+  (prevProps, nextProps) => {
+    return (
+      prevProps.event.id === nextProps.event.id &&
+      prevProps.event.color === nextProps.event.color &&
+      prevProps.isFirstDay === nextProps.isFirstDay &&
+      prevProps.isLastDay === nextProps.isLastDay &&
+      prevProps.className === nextProps.className &&
+      prevProps.isDragging === nextProps.isDragging &&
+      prevProps.onClick === nextProps.onClick &&
+      prevProps.onMouseDown === nextProps.onMouseDown &&
+      prevProps.onTouchStart === nextProps.onTouchStart &&
+      ((!prevProps.currentTime && !nextProps.currentTime) ||
+        prevProps.currentTime?.getTime() === nextProps.currentTime?.getTime())
+    );
+  },
+);
 
 interface EventWrapperProps {
   children: React.ReactNode;
@@ -100,7 +148,8 @@ interface EventWrapperProps {
   onTouchStart?: (e: React.TouchEvent) => void;
 }
 
-export function EventItem({
+// Main EventItem component with memoization
+const EventItemComponent = function EventItem({
   children,
   className,
   currentTime,
@@ -116,8 +165,6 @@ export function EventItem({
   onMouseDown,
   onTouchStart,
 }: EventItemProps) {
-  const eventColor = event.color;
-
   // Use the provided currentTime (for dragging) or the event's actual time
   const displayStart = useMemo(() => {
     return currentTime || new Date(event.start);
@@ -137,7 +184,7 @@ export function EventItem({
     return differenceInMinutes(displayEnd, displayStart);
   }, [displayStart, displayEnd]);
 
-  const getEventTime = () => {
+  const getEventTime = useCallback(() => {
     if (event.allDay) return "All day";
 
     // For short events (less than 45 minutes), only show start time
@@ -147,10 +194,27 @@ export function EventItem({
 
     // For longer events, show both start and end time
     return `${formatTimeWithOptionalMinutes(displayStart)} - ${formatTimeWithOptionalMinutes(displayEnd)}`;
-  };
+  }, [event.allDay, durationMinutes, displayStart, displayEnd]);
 
-  // console.log(getEventColorClasses(eventColor));
+  // Memoize the agenda view button className - moved outside conditionals
+  const agendaButtonClassName = useMemo(() => {
+    if (view !== "agenda") return ""; // Only calculate for agenda view
 
+    const isEventInPast = isPast(new Date(event.end));
+    return cn(
+      "focus-visible:border-ring focus-visible:ring-ring/50 flex w-full flex-col gap-1 rounded p-2 text-left transition outline-none focus-visible:ring-[3px]",
+      getEventColorClasses(event.color),
+      {
+        "line-through opacity-90": isEventInPast,
+      },
+      className,
+    );
+  }, [event.color, event.end, className, view]);
+
+  // Calculate if event is short - moved outside conditionals
+  const isShortEvent = durationMinutes < 45;
+
+  // Month view rendering
   if (view === "month") {
     return (
       <EventWrapper
@@ -183,12 +247,13 @@ export function EventItem({
     );
   }
 
+  // Week/day view rendering
   if (view === "week" || view === "day") {
     return (
       <EventWrapper
         className={cn(
           "py-1",
-          durationMinutes < 45 ? "items-center" : "flex-col",
+          isShortEvent ? "items-center" : "flex-col",
           view === "week" ? "text-[10px] sm:text-[13px]" : "text-[13px]",
           className,
         )}
@@ -203,7 +268,7 @@ export function EventItem({
         isFirstDay={isFirstDay}
         isLastDay={isLastDay}
       >
-        {durationMinutes < 45 ? (
+        {isShortEvent ? (
           <div className="truncate">
             {event.title}{" "}
             {showTime && (
@@ -226,19 +291,13 @@ export function EventItem({
     );
   }
 
-  // Agenda view - kept separate since it's significantly different
-
+  // Agenda view rendering
   return (
     <button
-      className={cn(
-        "focus-visible:border-ring focus-visible:ring-ring/50 flex w-full flex-col gap-1 rounded p-2 text-left transition outline-none focus-visible:ring-[3px] data-past-event:line-through data-past-event:opacity-90",
-        getEventColorClasses(eventColor),
-        className,
-      )}
+      className={agendaButtonClassName}
       onClick={onClick}
       onMouseDown={onMouseDown}
       onTouchStart={onTouchStart}
-      data-past-event={isPast(new Date(event.end)) || undefined}
       {...dndListeners}
       {...dndAttributes}
     >
@@ -248,8 +307,8 @@ export function EventItem({
           <span>All day</span>
         ) : (
           <span className="uppercase">
-            {formatTimeWithOptionalMinutes(displayStart)} -{" "}
-            {formatTimeWithOptionalMinutes(displayEnd)}
+            {formatTimeWithOptionalMinutes(new Date(event.start))} -{" "}
+            {formatTimeWithOptionalMinutes(new Date(event.end))}
           </span>
         )}
         {event.location && (
@@ -264,4 +323,39 @@ export function EventItem({
       )}
     </button>
   );
-}
+};
+
+// Add custom comparison function for memoization
+export const EventItem = React.memo(
+  EventItemComponent,
+  (prevProps, nextProps) => {
+    // Only re-render if any of these props change
+    return (
+      // Event data equality checks
+      prevProps.event.id === nextProps.event.id &&
+      prevProps.event.title === nextProps.event.title &&
+      prevProps.event.start === nextProps.event.start &&
+      prevProps.event.end === nextProps.event.end &&
+      prevProps.event.color === nextProps.event.color &&
+      prevProps.event.allDay === nextProps.event.allDay &&
+      prevProps.event.location === nextProps.event.location &&
+      prevProps.event.description === nextProps.event.description &&
+      // View props equality
+      prevProps.view === nextProps.view &&
+      prevProps.isFirstDay === nextProps.isFirstDay &&
+      prevProps.isLastDay === nextProps.isLastDay &&
+      prevProps.showTime === nextProps.showTime &&
+      prevProps.isDragging === nextProps.isDragging &&
+      // Handlers equality
+      prevProps.onClick === nextProps.onClick &&
+      prevProps.onMouseDown === nextProps.onMouseDown &&
+      prevProps.onTouchStart === nextProps.onTouchStart &&
+      // Current time check (for dragging)
+      ((!prevProps.currentTime && !nextProps.currentTime) ||
+        prevProps.currentTime?.getTime() === nextProps.currentTime?.getTime())
+    );
+  },
+);
+
+EventWrapper.displayName = "EventWrapper";
+EventItem.displayName = "EventItem";

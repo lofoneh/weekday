@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   addDays,
@@ -82,6 +82,9 @@ export function EventCalendar({
   );
   const { open } = useSidebar();
 
+  // Memoize the events array to prevent unnecessary re-renders
+  const memoizedEvents = useMemo(() => events, [events]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
@@ -108,7 +111,7 @@ export function EventCalendar({
     };
   }, [isEventDialogOpen]);
 
-  const handlePrevious = () => {
+  const handlePrevious = useCallback(() => {
     match(view)
       .with("month", () => setCurrentDate(subMonths(currentDate, 1)))
       .with("week", () => setCurrentDate(subWeeks(currentDate, 1)))
@@ -117,9 +120,9 @@ export function EventCalendar({
         setCurrentDate(addDays(currentDate, -AgendaDaysToShow)),
       )
       .exhaustive();
-  };
+  }, [view, setCurrentDate, currentDate]);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     match(view)
       .with("month", () => setCurrentDate(addMonths(currentDate, 1)))
       .with("week", () => setCurrentDate(addWeeks(currentDate, 1)))
@@ -128,13 +131,13 @@ export function EventCalendar({
         setCurrentDate(addDays(currentDate, AgendaDaysToShow)),
       )
       .exhaustive();
-  };
+  }, [view, setCurrentDate, currentDate]);
 
-  const handleToday = () => {
+  const handleToday = useCallback(() => {
     setCurrentDate(new Date());
-  };
+  }, [setCurrentDate]);
 
-  const handleEventSelect = (event: CalendarEvent) => {
+  const handleEventSelect = useCallback((event: CalendarEvent) => {
     const update = () => {
       setSelectedEvent(event);
       setIsEventDialogOpen(true);
@@ -142,9 +145,9 @@ export function EventCalendar({
     requestAnimationFrame(() => {
       requestAnimationFrame(update);
     });
-  };
+  }, []);
 
-  const handleEventCreate = (startTime: Date) => {
+  const handleEventCreate = useCallback((startTime: Date) => {
     const minutes = startTime.getMinutes();
     const remainder = minutes % 15;
     if (remainder !== 0) {
@@ -166,73 +169,96 @@ export function EventCalendar({
     };
     setSelectedEvent(newEvent);
     setIsEventDialogOpen(true);
-  };
+  }, []);
 
-  const handleEventSave = (event: CalendarEvent) => {
-    if (event.id) {
+  const handleEventSave = useCallback(
+    (event: CalendarEvent) => {
+      if (event.id) {
+        if (isUpdatingEvent) {
+          return;
+        }
+        onEventUpdate?.(event);
+        toast(`Event "${event.title}" updated`, {
+          description: format(new Date(event.start), "MMM d, yyyy"),
+          position: "bottom-left",
+        });
+      } else {
+        if (isCreatingEvent) {
+          return;
+        }
+        onEventAdd?.({
+          ...event,
+          id: Math.random().toString(36).substring(2, 11),
+        });
+
+        toast(`Event "${event.title}" added`, {
+          description: format(new Date(event.start), "MMM d, yyyy"),
+          position: "bottom-left",
+        });
+      }
+
+      if (!isCreatingEvent && !isUpdatingEvent) {
+        setIsEventDialogOpen(false);
+        setSelectedEvent(null);
+      }
+    },
+    [isCreatingEvent, isUpdatingEvent, onEventAdd, onEventUpdate],
+  );
+
+  const handleEventDelete = useCallback(
+    (eventId: string) => {
+      match(isDeletingEvent)
+        .with(true, () => {})
+        .with(false, () => {
+          const deletedEvent = memoizedEvents.find((e) => e.id === eventId);
+          onEventDelete?.(eventId);
+
+          match(deletedEvent)
+            .with(P.not(P.nullish), (evt) => {
+              toast(`Event "${evt.title}" deleted`, {
+                description: format(new Date(evt.start), "MMM d, yyyy"),
+                position: "bottom-left",
+              });
+            })
+            .otherwise(() => {});
+
+          setIsEventDialogOpen(false);
+          setSelectedEvent(null);
+        })
+        .exhaustive();
+    },
+    [isDeletingEvent, memoizedEvents, onEventDelete],
+  );
+
+  const handleEventUpdate = useCallback(
+    (updatedEvent: CalendarEvent) => {
       if (isUpdatingEvent) {
         return;
       }
-      onEventUpdate?.(event);
-      toast(`Event "${event.title}" updated`, {
-        description: format(new Date(event.start), "MMM d, yyyy"),
+
+      onEventUpdate?.(updatedEvent);
+
+      toast(`Event "${updatedEvent.title}" moved`, {
+        description: format(new Date(updatedEvent.start), "MMM d, yyyy"),
         position: "bottom-left",
       });
-    } else {
-      if (isCreatingEvent) {
-        return;
-      }
-      onEventAdd?.({
-        ...event,
-        id: Math.random().toString(36).substring(2, 11),
-      });
+    },
+    [isUpdatingEvent, onEventUpdate],
+  );
 
-      toast(`Event "${event.title}" added`, {
-        description: format(new Date(event.start), "MMM d, yyyy"),
-        position: "bottom-left",
-      });
-    }
+  const handleOpenNewEvent = useCallback(() => {
+    setSelectedEvent(null);
+    setIsEventDialogOpen(true);
+  }, []);
 
-    if (!isCreatingEvent && !isUpdatingEvent) {
-      setIsEventDialogOpen(false);
-      setSelectedEvent(null);
-    }
-  };
+  const handleCloseEventDialog = useCallback(() => {
+    setIsEventDialogOpen(false);
+    setSelectedEvent(null);
+  }, []);
 
-  const handleEventDelete = (eventId: string) => {
-    match(isDeletingEvent)
-      .with(true, () => {})
-      .with(false, () => {
-        const deletedEvent = events.find((e) => e.id === eventId);
-        onEventDelete?.(eventId);
-
-        match(deletedEvent)
-          .with(P.not(P.nullish), (evt) => {
-            toast(`Event "${evt.title}" deleted`, {
-              description: format(new Date(evt.start), "MMM d, yyyy"),
-              position: "bottom-left",
-            });
-          })
-          .otherwise(() => {});
-
-        setIsEventDialogOpen(false);
-        setSelectedEvent(null);
-      })
-      .exhaustive();
-  };
-
-  const handleEventUpdate = (updatedEvent: CalendarEvent) => {
-    if (isUpdatingEvent) {
-      return;
-    }
-
-    onEventUpdate?.(updatedEvent);
-
-    toast(`Event "${updatedEvent.title}" moved`, {
-      description: format(new Date(updatedEvent.start), "MMM d, yyyy"),
-      position: "bottom-left",
-    });
-  };
+  const handleSetView = useCallback((newView: CalendarView) => {
+    setView(newView);
+  }, []);
 
   const viewTitle = useMemo(() => {
     if (view === "month") {
@@ -337,10 +363,7 @@ export function EventCalendar({
                 variant="outline"
                 className="max-sm:h-8 max-sm:px-2.5!"
                 disabled={isCreatingEvent || isUpdatingEvent || isDeletingEvent}
-                onClick={() => {
-                  setSelectedEvent(null);
-                  setIsEventDialogOpen(true);
-                }}
+                onClick={handleOpenNewEvent}
               >
                 New Event
               </Button>
@@ -359,16 +382,16 @@ export function EventCalendar({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="min-w-32" align="end">
-                  <DropdownMenuItem onClick={() => setView("month")}>
+                  <DropdownMenuItem onClick={() => handleSetView("month")}>
                     Month <DropdownMenuShortcut>M</DropdownMenuShortcut>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setView("week")}>
+                  <DropdownMenuItem onClick={() => handleSetView("week")}>
                     Week <DropdownMenuShortcut>W</DropdownMenuShortcut>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setView("day")}>
+                  <DropdownMenuItem onClick={() => handleSetView("day")}>
                     Day <DropdownMenuShortcut>D</DropdownMenuShortcut>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setView("agenda")}>
+                  <DropdownMenuItem onClick={() => handleSetView("agenda")}>
                     Agenda <DropdownMenuShortcut>A</DropdownMenuShortcut>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -387,7 +410,7 @@ export function EventCalendar({
                 onEventCreate={handleEventCreate}
                 onEventSelect={handleEventSelect}
                 currentDate={currentDate}
-                events={events}
+                events={memoizedEvents}
               />
             ))
             .with("week", () => (
@@ -395,7 +418,7 @@ export function EventCalendar({
                 onEventCreate={handleEventCreate}
                 onEventSelect={handleEventSelect}
                 currentDate={currentDate}
-                events={events}
+                events={memoizedEvents}
               />
             ))
             .with("day", () => (
@@ -403,24 +426,21 @@ export function EventCalendar({
                 onEventCreate={handleEventCreate}
                 onEventSelect={handleEventSelect}
                 currentDate={currentDate}
-                events={events}
+                events={memoizedEvents}
               />
             ))
             .with("agenda", () => (
               <AgendaView
                 onEventSelect={handleEventSelect}
                 currentDate={currentDate}
-                events={events}
+                events={memoizedEvents}
               />
             ))
             .exhaustive()}
         </div>
 
         <EventDialog
-          onClose={() => {
-            setIsEventDialogOpen(false);
-            setSelectedEvent(null);
-          }}
+          onClose={handleCloseEventDialog}
           onDelete={handleEventDelete}
           onSave={handleEventSave}
           event={selectedEvent}

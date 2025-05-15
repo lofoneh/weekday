@@ -1,4 +1,7 @@
+import { Monitoring } from "react-scan/monitoring/next"; // Import this first before React
+
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 
 import { CalendarProvider } from "@/components/event-calendar/calendar-context";
 import { Toaster } from "@/components/ui/sonner";
@@ -25,6 +28,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <Script
+          src="https://unpkg.com/react-scan/dist/install-hook.global.js"
+          strategy="beforeInteractive"
+        />
+        <Script src="https://unpkg.com/react-scan/dist/auto.global.js" />
+      </head>
       <body
         className={`${fontSans.variable} ${fontMono.variable} bg-sidebar font-sans antialiased`}
       >
@@ -36,7 +46,15 @@ export default function RootLayout({
         >
           <ChatProvider>
             <TRPCReactProvider>
-              <CalendarProvider>{children}</CalendarProvider>
+              <CalendarProvider>
+                <Monitoring
+                  apiKey="aAtMeM4KutsWRfQmLmZ-COHAsOuPvThS"
+                  branch={process.env.GIT_BRANCH}
+                  commit={process.env.GIT_COMMIT_HASH}
+                  url="https://monitoring.react-scan.com/api/v1/ingest"
+                />
+                {children}
+              </CalendarProvider>
               <Toaster />
             </TRPCReactProvider>
           </ChatProvider>

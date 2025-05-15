@@ -2,6 +2,15 @@ import "./env.js";
 
 /** @type {import("next").NextConfig} */
 const config = {
+  compiler: {
+    reactRemoveProperties: process.env.NODE_ENV === "production",
+    removeConsole: process.env.NODE_ENV === "production",
+  },
+  // experimental: {
+  //   optimizeCss: true,
+  //   optimizePackageImports: ["@radix-ui/react-select"],
+  //   scrollRestoration: true,
+  // },
   images: {
     remotePatterns: [
       {
@@ -14,6 +23,7 @@ const config = {
       },
     ],
   },
+  reactStrictMode: true,
 };
 
 export default config;

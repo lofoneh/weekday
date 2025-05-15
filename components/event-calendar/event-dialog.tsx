@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { CalendarEvent, EventColor } from "@/components/event-calendar";
 
@@ -49,6 +49,23 @@ interface EventDialogProps {
   onDelete: (eventId: string) => void;
   onSave: (event: CalendarEvent) => void;
 }
+
+// Pre-compute time options once outside of the component
+const timeOptions = (() => {
+  const options = [];
+  for (let hour = StartHour; hour <= EndHour; hour++) {
+    for (let minute = 0; minute < 60; minute += 15) {
+      const formattedHour = hour.toString().padStart(2, "0");
+      const formattedMinute = minute.toString().padStart(2, "0");
+      const value = `${formattedHour}:${formattedMinute}`;
+      // Use a fixed date to avoid unnecessary date object creations
+      const date = new Date(2000, 0, 1, hour, minute);
+      const label = format(date, "h:mm a");
+      options.push({ label, value });
+    }
+  }
+  return options;
+})();
 
 export function EventDialog({
   event,
@@ -118,23 +135,6 @@ export function EventDialog({
     const minutes = Math.floor(date.getMinutes() / 15) * 15;
     return `${hours}:${minutes.toString().padStart(2, "0")}`;
   };
-
-  // Memoize time options so they're only calculated once
-  const timeOptions = useMemo(() => {
-    const options = [];
-    for (let hour = StartHour; hour <= EndHour; hour++) {
-      for (let minute = 0; minute < 60; minute += 15) {
-        const formattedHour = hour.toString().padStart(2, "0");
-        const formattedMinute = minute.toString().padStart(2, "0");
-        const value = `${formattedHour}:${formattedMinute}`;
-        // Use a fixed date to avoid unnecessary date object creations
-        const date = new Date(2000, 0, 1, hour, minute);
-        const label = format(date, "h:mm a");
-        options.push({ label, value });
-      }
-    }
-    return options;
-  }, []); // Empty dependency array ensures this only runs once
 
   const handleSave = () => {
     const start = new Date(formState.startDate);

@@ -50,7 +50,7 @@ function SelectTrigger({
   );
 }
 
-function SelectContent({
+const SelectContent = React.memo(function SelectContent({
   children,
   className,
   position = "popper",
@@ -82,7 +82,7 @@ function SelectContent({
       </SelectPrimitive.Content>
     </SelectPrimitive.Portal>
   );
-}
+});
 
 function SelectLabel({
   className,
@@ -100,7 +100,7 @@ function SelectLabel({
   );
 }
 
-function SelectItem({
+const SelectItem = React.memo(function SelectItem({
   children,
   className,
   ...props
@@ -122,7 +122,13 @@ function SelectItem({
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
     </SelectPrimitive.Item>
   );
-}
+});
+
+const SelectItemText = React.memo(function SelectItemText(
+  props: React.ComponentProps<typeof SelectPrimitive.ItemText>,
+) {
+  return <SelectPrimitive.ItemText {...props} />;
+});
 
 function SelectSeparator({
   className,
@@ -178,6 +184,7 @@ export {
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectItemText,
   SelectLabel,
   SelectScrollDownButton,
   SelectScrollUpButton,
