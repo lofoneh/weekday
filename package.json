@@ -80,6 +80,7 @@
     "@eslint/eslintrc": "^3.3.1",
     "@tailwindcss/postcss": "^4.0.15",
     "@tailwindcss/typography": "^0.5.16",
+    "@tanstack/react-query-devtools": "^5.76.1",
     "@types/node": "^20.14.10",
     "@types/react": "19.1.4",
     "@types/react-dom": "19.1.5",

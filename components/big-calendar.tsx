@@ -3,10 +3,26 @@
 import { useMemo } from "react";
 
 import { addMonths, endOfMonth, startOfMonth, subMonths } from "date-fns";
+import { v7 as uuidv7 } from "uuid";
 
 import { type CalendarEvent, EventCalendar } from "@/components/event-calendar";
 import { useCalendarContext } from "@/components/event-calendar/calendar-context";
-import { api } from "@/trpc/react";
+import { type RouterInputs, type RouterOutputs, api } from "@/trpc/react";
+
+type CreateEventMutationContext = {
+  optimisticEvent: ProcessedEventType;
+  previousEvents: GetEventsQueryOutput;
+};
+type DeleteEventMutationContext = {
+  deletedEventId: string;
+  previousEvents: GetEventsQueryOutput;
+};
+
+type GetEventsQueryOutput = RouterOutputs["calendar"]["getEvents"] | undefined;
+type ProcessedEventType = RouterOutputs["calendar"]["getEvents"][number];
+type UpdateEventMutationContext = {
+  previousEvents: GetEventsQueryOutput;
+};
 
 export function BigCalendar() {
   const { currentDate, isCalendarVisible } = useCalendarContext();
@@ -21,7 +37,6 @@ export function BigCalendar() {
     };
   }, [currentDate]);
 
-  // Server rendered???
   const { data: events } = api.calendar.getEvents.useQuery({
     timeMax,
     timeMin,
@@ -29,20 +44,196 @@ export function BigCalendar() {
 
   const { isPending: isCreatingEvent, mutate: createEvent } =
     api.calendar.createEvent.useMutation({
-      onSuccess: () => {
-        utils.calendar.getEvents.invalidate();
+      onError: (
+        err,
+        newEventData,
+        context: CreateEventMutationContext | undefined,
+      ) => {
+        if (context?.previousEvents) {
+          utils.calendar.getEvents.setData(
+            { timeMax, timeMin },
+            context.previousEvents,
+          );
+        }
+        console.error(
+          "Error creating event, rolled back optimistic update:",
+          err,
+        );
+      },
+      onMutate: async (
+        newEventData: RouterInputs["calendar"]["createEvent"],
+      ): Promise<CreateEventMutationContext> => {
+        await utils.calendar.getEvents.cancel({ timeMax, timeMin });
+        const previousEvents = utils.calendar.getEvents.getData({
+          timeMax,
+          timeMin,
+        });
+
+        const optimisticEvent: ProcessedEventType = {
+          id: uuidv7(),
+          allDay: newEventData.event.allDay ?? false,
+          calendarId: newEventData.calendarId,
+          color: newEventData.event.color ?? "#3174ad",
+          description: newEventData.event.description,
+          end: newEventData.event.end,
+          location: newEventData.event.location,
+          start: newEventData.event.start,
+          title: newEventData.event.title,
+        };
+
+        utils.calendar.getEvents.setData(
+          { timeMax, timeMin },
+          (oldEvents) =>
+            (oldEvents
+              ? [...oldEvents, optimisticEvent]
+              : [optimisticEvent]) as GetEventsQueryOutput,
+        );
+        return { optimisticEvent, previousEvents };
+      },
+      onSettled: (
+        data,
+        error,
+        variables,
+        context: CreateEventMutationContext | undefined,
+      ) => {
+        utils.calendar.getEvents.invalidate({ timeMax, timeMin });
+        utils.calendar.getFreeSlots.invalidate();
+      },
+      onSuccess: (
+        data,
+        variables,
+        context: CreateEventMutationContext | undefined,
+      ) => {
+        if (context?.optimisticEvent) {
+          utils.calendar.getEvents.setData(
+            { timeMax, timeMin },
+            (oldEvents) =>
+              oldEvents?.map((event) =>
+                event.id === context.optimisticEvent.id ? data : event,
+              ) as GetEventsQueryOutput,
+          );
+        } else {
+          utils.calendar.getEvents.invalidate({ timeMax, timeMin });
+        }
       },
     });
+
   const { isPending: isUpdatingEvent, mutate: updateEvent } =
     api.calendar.updateEvent.useMutation({
-      onSuccess: () => {
-        utils.calendar.getEvents.invalidate();
+      onError: (
+        err,
+        updatedEventData,
+        context: UpdateEventMutationContext | undefined,
+      ) => {
+        if (context?.previousEvents) {
+          utils.calendar.getEvents.setData(
+            { timeMax, timeMin },
+            context.previousEvents,
+          );
+        }
+        console.error(
+          "Error updating event, rolled back optimistic update:",
+          err,
+        );
+      },
+      onMutate: async (
+        updatedEventData: RouterInputs["calendar"]["updateEvent"],
+      ): Promise<UpdateEventMutationContext> => {
+        await utils.calendar.getEvents.cancel({ timeMax, timeMin });
+        const previousEvents = utils.calendar.getEvents.getData({
+          timeMax,
+          timeMin,
+        });
+
+        utils.calendar.getEvents.setData(
+          { timeMax, timeMin },
+          (oldEvents) =>
+            oldEvents?.map((event) =>
+              event.id === updatedEventData.eventId
+                ? ({
+                    ...event,
+                    allDay: updatedEventData.event.allDay ?? event.allDay,
+                    color: updatedEventData.event.color ?? event.color,
+                    description:
+                      updatedEventData.event.description ?? event.description,
+                    end: updatedEventData.event.end ?? event.end,
+                    location: updatedEventData.event.location ?? event.location,
+                    start: updatedEventData.event.start ?? event.start,
+                    title: updatedEventData.event.title ?? event.title,
+                  } as ProcessedEventType)
+                : event,
+            ) as GetEventsQueryOutput,
+        );
+        return { previousEvents };
+      },
+      onSettled: (
+        data,
+        error,
+        variables,
+        context: UpdateEventMutationContext | undefined,
+      ) => {
+        utils.calendar.getEvents.invalidate({ timeMax, timeMin });
+        utils.calendar.getFreeSlots.invalidate();
+      },
+      onSuccess: (
+        data,
+        variables,
+        context: UpdateEventMutationContext | undefined,
+      ) => {
+        utils.calendar.getEvents.setData(
+          { timeMax, timeMin },
+          (oldEvents) =>
+            oldEvents?.map((event) =>
+              event.id === variables.eventId ? data : event,
+            ) as GetEventsQueryOutput,
+        );
       },
     });
+
   const { isPending: isDeletingEvent, mutate: deleteEvent } =
     api.calendar.deleteEvent.useMutation({
-      onSuccess: () => {
-        utils.calendar.getEvents.invalidate();
+      onError: (
+        err,
+        deletedEventData,
+        context: DeleteEventMutationContext | undefined,
+      ) => {
+        if (context?.previousEvents) {
+          utils.calendar.getEvents.setData(
+            { timeMax, timeMin },
+            context.previousEvents,
+          );
+        }
+        console.error(
+          "Error deleting event, rolled back optimistic update:",
+          err,
+        );
+      },
+      onMutate: async (
+        deletedEventData: RouterInputs["calendar"]["deleteEvent"],
+      ): Promise<DeleteEventMutationContext> => {
+        await utils.calendar.getEvents.cancel({ timeMax, timeMin });
+        const previousEvents = utils.calendar.getEvents.getData({
+          timeMax,
+          timeMin,
+        });
+
+        utils.calendar.getEvents.setData(
+          { timeMax, timeMin },
+          (oldEvents) =>
+            oldEvents?.filter(
+              (event) => event.id !== deletedEventData.eventId,
+            ) as GetEventsQueryOutput,
+        );
+        return { deletedEventId: deletedEventData.eventId, previousEvents };
+      },
+      onSettled: (
+        data,
+        error,
+        variables,
+        context: DeleteEventMutationContext | undefined,
+      ) => {
+        utils.calendar.getEvents.invalidate({ timeMax, timeMin });
+        utils.calendar.getFreeSlots.invalidate();
       },
     });
 
@@ -56,15 +247,21 @@ export function BigCalendar() {
       return;
     }
 
+    const startDate =
+      typeof event.start === "string" ? new Date(event.start) : event.start;
+    const endDate =
+      typeof event.end === "string" ? new Date(event.end) : event.end;
+
     createEvent({
       calendarId: event.calendarId ?? "primary",
       event: {
         allDay: event.allDay,
+        color: event.color,
         description: event.description,
-        end: new Date(event.end),
+        end: endDate,
         location: event.location,
-        start: new Date(event.start),
-        title: event.title,
+        start: startDate,
+        title: String(event.title),
       },
     });
   };
@@ -74,15 +271,27 @@ export function BigCalendar() {
       console.error("Event ID is required for updates.");
       return;
     }
+    const startDate = updatedEvent.start
+      ? typeof updatedEvent.start === "string"
+        ? new Date(updatedEvent.start)
+        : updatedEvent.start
+      : undefined;
+    const endDate = updatedEvent.end
+      ? typeof updatedEvent.end === "string"
+        ? new Date(updatedEvent.end)
+        : updatedEvent.end
+      : undefined;
+
     updateEvent({
       calendarId: updatedEvent.calendarId ?? "primary",
       event: {
         allDay: updatedEvent.allDay,
+        color: updatedEvent.color,
         description: updatedEvent.description,
-        end: updatedEvent.end ? new Date(updatedEvent.end) : undefined,
+        end: endDate,
         location: updatedEvent.location,
-        start: updatedEvent.start ? new Date(updatedEvent.start) : undefined,
-        title: updatedEvent.title,
+        start: startDate,
+        title: updatedEvent.title ? String(updatedEvent.title) : undefined,
       },
       eventId: updatedEvent.id,
     });
