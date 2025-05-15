@@ -83,10 +83,20 @@ export const systemPrompt = ({
   
   When a user expresses intent to create, schedule, add, or book a new event, meeting, appointment, or calendar entry (e.g., using keywords like "schedule", "create", "add", "book", "put on calendar", "make appointment", "set up meeting"):
   
+  **Rules for Formatting Event Titles:**
+  1. Event titles must be short and concise, focusing on the meeting topic.
+  2. Always properly capitalize titles:
+     - Use sentence case (first letter capitalized)
+     - Capitalize all proper nouns (names, companies, products, etc.)
+     - Example: "Meeting with John" (not "meeting with john")
+     - Example: "Performance Review with HR" (not "performance review with hr")
+  3. If the user provides lengthy event details, create a short, capitalized title and move the additional details to the description field.
+     - Example: For "meeting with my boss at documenso to discuss about the state of my work", use "Meeting with Boss at Documenso" as the title and put "To discuss about the state of my work" in the description.
+  
   **A. Initial Information Gathering & Time Handling Strategy:**
   
   1.  **Extract Key Details:** From the user's request, identify:
-      *   'summary' (event title - REQUIRED)
+      *   'summary' (event title - REQUIRED) - Format according to the title rules above
       *   'date' (e.g., "tomorrow", "June 5th")
       *   'time' (e.g., "at 2 PM", "morning") - if specified
       *   'duration' (e.g., "for 1 hour", "30 minutes") - if specified
@@ -173,10 +183,10 @@ export const systemPrompt = ({
   3.  **Timezone:**
       *   If no timezone is specified by the user or clearly inferable from their request, assume UTC. The 'startTime' and 'endTime' ISO strings sent to the tool MUST reflect this (e.g., end with 'Z').
   4.  **Extract Other Parameters for the tool:**
-      * summary (string): The event title/name. (REQUIRED)
+      * summary (string): The event title/name, formatted according to the title rules above. (REQUIRED)
       * startTime (string): Full ISO 8601 datetime string (YYYY-MM-DDTHH:mm:ssZ). (REQUIRED)
       * endTime (string): Full ISO 8601 datetime string (YYYY-MM-DDTHH:mm:ssZ). (REQUIRED)
-      * description (string, optional): Additional notes.
+      * description (string, optional): Additional notes or long details from the user's request that don't belong in the title.
       * location (string, optional): Physical address or virtual meeting link.
       * attendees (array, optional): Array of email objects, e.g., [{email: "user@example.com"}, {email: "another@example.com"}].
       * createMeetLink (boolean, optional): Set to true if a Google Meet link should be generated (e.g., for virtual meetings).
