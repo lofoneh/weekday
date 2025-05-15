@@ -45,16 +45,21 @@ export function ChatSidebar() {
             if (part.type === "tool-invocation") {
               const toolInvocation = part.toolInvocation as ToolInvocation;
               if (
-                (toolInvocation.toolName === "createEvent" ||
-                  toolInvocation.toolName === "updateEvent") &&
-                toolInvocation.state === "result" &&
-                !toolInvocation.result.error
+                toolInvocation.toolName === "createEvent" ||
+                toolInvocation.toolName === "updateEvent"
               ) {
                 utils.calendar.getEvents.invalidate();
-                break;
               }
             }
           }
+        }
+      },
+      onToolCall: ({ toolCall }) => {
+        if (
+          toolCall.toolName === "createEvent" ||
+          toolCall.toolName === "updateEvent"
+        ) {
+          utils.calendar.getEvents.invalidate();
         }
       },
     } satisfies UseChatOptions);
@@ -78,8 +83,6 @@ export function ChatSidebar() {
   if (!isChatOpen) {
     return null;
   }
-
-  console.log(messages);
 
   return (
     <div className="bg-background flex h-full flex-1 flex-col gap-4 rounded-2xl pt-0">

@@ -91,13 +91,14 @@ export const systemPrompt = ({
       *   'time' (e.g., "at 2 PM", "morning") - if specified
       *   'duration' (e.g., "for 1 hour", "30 minutes") - if specified
       *   Other optional details: 'location', 'description', 'attendees'.
+      *   IMPORTANT: If the user request contains BOTH a date AND a specific time (e.g., "tomorrow at 10am", "Friday at 3pm"), this MUST be recognized as a Scenario 1 case and proceed directly to event creation without using getFreeSlots.
   
   2.  **Determine Event Time ('startTime', 'endTime'):**
       *   **Scenario 1: Specific Time Provided by User.**
           *   If the user specifies a 'time' (e.g., "meeting tomorrow at 2 PM", "lunch on Friday at noon"):
               *   Convert this 'time' and the 'date' to a full ISO 8601 'startTime'.
               *   If 'duration' is given, calculate 'endTime'. If not, a default duration (see B.2 below, e.g., 1 hour) will be used later to calculate 'endTime'.
-              *   Proceed to **Part B: Pre-Tool Call Summary and Execution**.
+              *   IMPORTANT: When a specific time is provided (e.g., "10am", "2 PM", "noon"), DO NOT use getFreeSlots. Instead, proceed directly to **Part B: Pre-Tool Call Summary and Execution**.
       *   **Scenario 2: Date Provided but NO Specific Time, OR User Requests to Fill All Empty Slots.**
           *   This scenario covers two main types of requests:
               1.  The user provides a 'date' for a single event but no specific 'time' (e.g., "schedule 'Team Sync' for next Monday").
@@ -213,6 +214,7 @@ export const systemPrompt = ({
   - "Create a doctor appointment for June 15th, 2025 at 10am"
   - "Book a 30-minute call with marketing team next Monday at 9am, create a meet link"
   - "Put 'Vacation' on my calendar from July 10th to July 15th next year" (this is an all-day event, handled by Scenario A.2.4)
+  - "Create a meeting with philippa tomorrow at 10am" (Specific time is provided, should go directly to event creation)
   
   If absolutely critical information for 'createEvent' (like event summary or a recognizable date that cannot be clarified by Scenario A.2.3.a) is missing, you should ask clarifying questions. However, strive to use the flows described above to resolve date and time before creating the event.
   
