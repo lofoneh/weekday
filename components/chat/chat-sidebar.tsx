@@ -79,6 +79,8 @@ export function ChatSidebar() {
     return null;
   }
 
+  console.log(messages);
+
   return (
     <div className="bg-background flex h-full flex-1 flex-col gap-4 rounded-2xl pt-0">
       <div className="relative flex h-[calc(100vh-1rem)] w-full flex-col overflow-hidden">
@@ -97,44 +99,10 @@ export function ChatSidebar() {
           {messages.map((message: UIMessage) => {
             const isAssistant = message.role === "assistant";
 
-            console.log(message);
-
-            const allParts = [];
-
-            if (message.parts?.length) {
-              allParts.push(...message.parts);
-            }
-
-            if ((message as any).toolInvocations?.length) {
-              const toolInvocations = (message as any).toolInvocations;
-
-              for (const toolInvoc of toolInvocations) {
-                const alreadyInParts = message.parts?.some(
-                  (part) =>
-                    part.type === "tool-invocation" &&
-                    part.toolInvocation?.toolCallId === toolInvoc.toolCallId,
-                );
-
-                if (!alreadyInParts) {
-                  allParts.push({
-                    toolInvocation: toolInvoc,
-                    type: "tool-invocation",
-                  });
-                }
-              }
-            }
-
-            if (allParts.length === 0 && message.content) {
-              allParts.push({
-                text: message.content,
-                type: "text",
-              });
-            }
-
             return (
               <Message key={message.id}>
                 <div className="flex-1 space-y-2">
-                  {allParts.map((part, index) => {
+                  {message.parts?.map((part, index) => {
                     const toolInvocation =
                       part.type === "tool-invocation"
                         ? (part.toolInvocation as ToolInvocation)
@@ -299,7 +267,7 @@ export function ChatSidebar() {
                       .otherwise(() => null);
                   })}
 
-                  {allParts.length === 0 && (
+                  {message.parts?.length === 0 && (
                     <>
                       {match(isAssistant)
                         .with(true, () => (
