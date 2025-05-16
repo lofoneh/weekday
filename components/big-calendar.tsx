@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
+import { v7 as uuidv7 } from "uuid";
 
 import { addMonths, endOfMonth, startOfMonth, subMonths } from "date-fns";
-import { v7 as uuidv7 } from "uuid";
 
 import { type CalendarEvent, EventCalendar } from "@/components/event-calendar";
 import { useCalendarContext } from "@/components/event-calendar/calendar-context";
@@ -12,35 +12,82 @@ import { type RouterInputs, type RouterOutputs, api } from "@/trpc/react";
 type CreateEventMutationContext = {
   optimisticEvent: ProcessedEventType;
   previousEvents: GetEventsQueryOutput;
+  queryKey: { timeMax: string; timeMin: string };
 };
 type DeleteEventMutationContext = {
   deletedEventId: string;
   previousEvents: GetEventsQueryOutput;
+  queryKey: { timeMax: string; timeMin: string };
 };
 
 type GetEventsQueryOutput = RouterOutputs["calendar"]["getEvents"] | undefined;
 type ProcessedEventType = RouterOutputs["calendar"]["getEvents"][number];
 type UpdateEventMutationContext = {
   previousEvents: GetEventsQueryOutput;
+  queryKey: { timeMax: string; timeMin: string };
 };
 
 export function BigCalendar() {
   const { currentDate, isCalendarVisible } = useCalendarContext();
   const utils = api.useUtils();
 
+  // Calculate current query window - 3 months before and after current date
   const { timeMax, timeMin } = useMemo(() => {
-    const start = startOfMonth(subMonths(currentDate, 1));
-    const end = endOfMonth(addMonths(currentDate, 1));
+    const start = startOfMonth(subMonths(currentDate, 3));
+    const end = endOfMonth(addMonths(currentDate, 3));
     return {
       timeMax: end.toISOString(),
       timeMin: start.toISOString(),
     };
   }, [currentDate]);
 
-  const { data: events } = api.calendar.getEvents.useQuery({
-    timeMax,
-    timeMin,
-  });
+  // Use the standard query hook to fetch and manage events
+  const { data: events, isLoading } = api.calendar.getEvents.useQuery(
+    {
+      timeMax,
+      timeMin,
+    },
+    {
+      staleTime: 60 * 1000, // Consider data fresh for 1 minute
+      placeholderData: (prev) => prev, // Show previous data while fetching
+    },
+  );
+
+  // Prefetch next chunk of data when we're within 1 month of the boundary
+  const prefetchThreshold = 30; // days
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  const prefetchThresholdMs = prefetchThreshold * oneDayMs;
+  
+  // Check if we're approaching the future boundary and prefetch if needed
+  const timeToEndBoundary = new Date(timeMax).getTime() - currentDate.getTime();
+  if (timeToEndBoundary <= prefetchThresholdMs) {
+    const nextPrefetchEndDate = endOfMonth(addMonths(new Date(timeMax), 3));
+    const nextPrefetchStartDate = startOfMonth(new Date(timeMax));
+    
+    // Prefetch next chunk
+    void utils.calendar.getEvents.prefetch({
+      timeMin: nextPrefetchStartDate.toISOString(),
+      timeMax: nextPrefetchEndDate.toISOString(),
+    });
+  }
+  
+  // Check if we're approaching the past boundary and prefetch if needed
+  const timeToStartBoundary = currentDate.getTime() - new Date(timeMin).getTime();
+  if (timeToStartBoundary <= prefetchThresholdMs) {
+    const nextPrefetchStartDate = startOfMonth(subMonths(new Date(timeMin), 3));
+    const nextPrefetchEndDate = endOfMonth(new Date(timeMin));
+    
+    // Prefetch previous chunk
+    void utils.calendar.getEvents.prefetch({
+      timeMin: nextPrefetchStartDate.toISOString(),
+      timeMax: nextPrefetchEndDate.toISOString(),
+    });
+  }
+
+  // Filter events based on calendar visibility setting
+  const visibleEvents = useMemo(() => {
+    return events?.filter((event) => isCalendarVisible(event.calendarId));
+  }, [events, isCalendarVisible]);
 
   const { isPending: isCreatingEvent, mutate: createEvent } =
     api.calendar.createEvent.useMutation({
@@ -49,9 +96,9 @@ export function BigCalendar() {
         newEventData,
         context: CreateEventMutationContext | undefined,
       ) => {
-        if (context?.previousEvents) {
+        if (context?.previousEvents && context?.queryKey) {
           utils.calendar.getEvents.setData(
-            { timeMax, timeMin },
+            context.queryKey,
             context.previousEvents,
           );
         }
@@ -63,11 +110,11 @@ export function BigCalendar() {
       onMutate: async (
         newEventData: RouterInputs["calendar"]["createEvent"],
       ): Promise<CreateEventMutationContext> => {
-        await utils.calendar.getEvents.cancel({ timeMax, timeMin });
-        const previousEvents = utils.calendar.getEvents.getData({
-          timeMax,
-          timeMin,
-        });
+        // Use the current timeMin and timeMax for this operation
+        const queryKey = { timeMax, timeMin };
+        
+        await utils.calendar.getEvents.cancel(queryKey);
+        const previousEvents = utils.calendar.getEvents.getData(queryKey);
 
         const optimisticEvent: ProcessedEventType = {
           id: uuidv7(),
@@ -82,13 +129,13 @@ export function BigCalendar() {
         };
 
         utils.calendar.getEvents.setData(
-          { timeMax, timeMin },
+          queryKey,
           (oldEvents) =>
             (oldEvents
               ? [...oldEvents, optimisticEvent]
               : [optimisticEvent]) as GetEventsQueryOutput,
         );
-        return { optimisticEvent, previousEvents };
+        return { optimisticEvent, previousEvents, queryKey };
       },
       onSettled: (
         data,
@@ -96,7 +143,11 @@ export function BigCalendar() {
         variables,
         context: CreateEventMutationContext | undefined,
       ) => {
-        utils.calendar.getEvents.invalidate({ timeMax, timeMin });
+        if (context?.queryKey) {
+          utils.calendar.getEvents.invalidate(context.queryKey);
+        } else {
+          utils.calendar.getEvents.invalidate();
+        }
         utils.calendar.getFreeSlots.invalidate();
       },
       onSuccess: (
@@ -104,16 +155,16 @@ export function BigCalendar() {
         variables,
         context: CreateEventMutationContext | undefined,
       ) => {
-        if (context?.optimisticEvent) {
+        if (context?.optimisticEvent && context?.queryKey) {
           utils.calendar.getEvents.setData(
-            { timeMax, timeMin },
+            context.queryKey,
             (oldEvents) =>
               oldEvents?.map((event) =>
                 event.id === context.optimisticEvent.id ? data : event,
               ) as GetEventsQueryOutput,
           );
         } else {
-          utils.calendar.getEvents.invalidate({ timeMax, timeMin });
+          utils.calendar.getEvents.invalidate();
         }
       },
     });
@@ -125,9 +176,9 @@ export function BigCalendar() {
         updatedEventData,
         context: UpdateEventMutationContext | undefined,
       ) => {
-        if (context?.previousEvents) {
+        if (context?.previousEvents && context?.queryKey) {
           utils.calendar.getEvents.setData(
-            { timeMax, timeMin },
+            context.queryKey,
             context.previousEvents,
           );
         }
@@ -139,14 +190,14 @@ export function BigCalendar() {
       onMutate: async (
         updatedEventData: RouterInputs["calendar"]["updateEvent"],
       ): Promise<UpdateEventMutationContext> => {
-        await utils.calendar.getEvents.cancel({ timeMax, timeMin });
-        const previousEvents = utils.calendar.getEvents.getData({
-          timeMax,
-          timeMin,
-        });
+        // Use the current timeMin and timeMax for this operation
+        const queryKey = { timeMax, timeMin };
+        
+        await utils.calendar.getEvents.cancel(queryKey);
+        const previousEvents = utils.calendar.getEvents.getData(queryKey);
 
         utils.calendar.getEvents.setData(
-          { timeMax, timeMin },
+          queryKey,
           (oldEvents) =>
             oldEvents?.map((event) =>
               event.id === updatedEventData.eventId
@@ -164,7 +215,7 @@ export function BigCalendar() {
                 : event,
             ) as GetEventsQueryOutput,
         );
-        return { previousEvents };
+        return { previousEvents, queryKey };
       },
       onSettled: (
         data,
@@ -172,7 +223,11 @@ export function BigCalendar() {
         variables,
         context: UpdateEventMutationContext | undefined,
       ) => {
-        utils.calendar.getEvents.invalidate({ timeMax, timeMin });
+        if (context?.queryKey) {
+          utils.calendar.getEvents.invalidate(context.queryKey);
+        } else {
+          utils.calendar.getEvents.invalidate();
+        }
         utils.calendar.getFreeSlots.invalidate();
       },
       onSuccess: (
@@ -180,13 +235,15 @@ export function BigCalendar() {
         variables,
         context: UpdateEventMutationContext | undefined,
       ) => {
-        utils.calendar.getEvents.setData(
-          { timeMax, timeMin },
-          (oldEvents) =>
-            oldEvents?.map((event) =>
-              event.id === variables.eventId ? data : event,
-            ) as GetEventsQueryOutput,
-        );
+        if (context?.queryKey) {
+          utils.calendar.getEvents.setData(
+            context.queryKey,
+            (oldEvents) =>
+              oldEvents?.map((event) =>
+                event.id === variables.eventId ? data : event,
+              ) as GetEventsQueryOutput,
+          );
+        }
       },
     });
 
@@ -197,9 +254,9 @@ export function BigCalendar() {
         deletedEventData,
         context: DeleteEventMutationContext | undefined,
       ) => {
-        if (context?.previousEvents) {
+        if (context?.previousEvents && context?.queryKey) {
           utils.calendar.getEvents.setData(
-            { timeMax, timeMin },
+            context.queryKey,
             context.previousEvents,
           );
         }
@@ -211,20 +268,20 @@ export function BigCalendar() {
       onMutate: async (
         deletedEventData: RouterInputs["calendar"]["deleteEvent"],
       ): Promise<DeleteEventMutationContext> => {
-        await utils.calendar.getEvents.cancel({ timeMax, timeMin });
-        const previousEvents = utils.calendar.getEvents.getData({
-          timeMax,
-          timeMin,
-        });
+        // Use the current timeMin and timeMax for this operation
+        const queryKey = { timeMax, timeMin };
+        
+        await utils.calendar.getEvents.cancel(queryKey);
+        const previousEvents = utils.calendar.getEvents.getData(queryKey);
 
         utils.calendar.getEvents.setData(
-          { timeMax, timeMin },
+          queryKey,
           (oldEvents) =>
             oldEvents?.filter(
               (event) => event.id !== deletedEventData.eventId,
             ) as GetEventsQueryOutput,
         );
-        return { deletedEventId: deletedEventData.eventId, previousEvents };
+        return { deletedEventId: deletedEventData.eventId, previousEvents, queryKey };
       },
       onSettled: (
         data,
@@ -232,14 +289,14 @@ export function BigCalendar() {
         variables,
         context: DeleteEventMutationContext | undefined,
       ) => {
-        utils.calendar.getEvents.invalidate({ timeMax, timeMin });
+        if (context?.queryKey) {
+          utils.calendar.getEvents.invalidate(context.queryKey);
+        } else {
+          utils.calendar.getEvents.invalidate();
+        }
         utils.calendar.getFreeSlots.invalidate();
       },
     });
-
-  const visibleEvents = useMemo(() => {
-    return events?.filter((event) => isCalendarVisible(event.calendarId));
-  }, [events, isCalendarVisible]);
 
   const handleEventAdd = (event: CalendarEvent) => {
     if (!event.title || !event.start || !event.end) {

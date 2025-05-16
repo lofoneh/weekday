@@ -24,7 +24,14 @@ export default async function Page() {
   const timeMin = startOfMonth(subMonths(today, 3)).toISOString();
   const timeMax = endOfMonth(addMonths(today, 3)).toISOString();
 
-  api.calendar.getEvents.prefetch({ timeMax, timeMin });
+  await api.calendar.getEvents.prefetch({ timeMax, timeMin });
+
+  const nextStartDate = startOfMonth(addMonths(today, 3));
+  const nextEndDate = endOfMonth(addMonths(today, 6));
+  await api.calendar.getEvents.prefetch({
+    timeMax: nextEndDate.toISOString(),
+    timeMin: nextStartDate.toISOString(),
+  });
 
   return (
     <HydrateClient>
