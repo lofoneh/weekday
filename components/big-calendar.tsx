@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import { v7 as uuidv7 } from "uuid";
 
 import { addMonths, endOfMonth, startOfMonth, subMonths } from "date-fns";
+import { v7 as uuidv7 } from "uuid";
 
 import { type CalendarEvent, EventCalendar } from "@/components/event-calendar";
 import { useCalendarContext } from "@/components/event-calendar/calendar-context";
@@ -31,7 +31,6 @@ export function BigCalendar() {
   const { currentDate, isCalendarVisible } = useCalendarContext();
   const utils = api.useUtils();
 
-  // Calculate current query window - 3 months before and after current date
   const { timeMax, timeMin } = useMemo(() => {
     const start = startOfMonth(subMonths(currentDate, 3));
     const end = endOfMonth(addMonths(currentDate, 3));
@@ -41,7 +40,6 @@ export function BigCalendar() {
     };
   }, [currentDate]);
 
-  // Use the standard query hook to fetch and manage events
   const { data: events, isLoading } = api.calendar.getEvents.useQuery(
     {
       timeMax,
@@ -57,30 +55,31 @@ export function BigCalendar() {
   const prefetchThreshold = 30; // days
   const oneDayMs = 24 * 60 * 60 * 1000;
   const prefetchThresholdMs = prefetchThreshold * oneDayMs;
-  
+
   // Check if we're approaching the future boundary and prefetch if needed
   const timeToEndBoundary = new Date(timeMax).getTime() - currentDate.getTime();
   if (timeToEndBoundary <= prefetchThresholdMs) {
     const nextPrefetchEndDate = endOfMonth(addMonths(new Date(timeMax), 3));
     const nextPrefetchStartDate = startOfMonth(new Date(timeMax));
-    
+
     // Prefetch next chunk
     void utils.calendar.getEvents.prefetch({
-      timeMin: nextPrefetchStartDate.toISOString(),
       timeMax: nextPrefetchEndDate.toISOString(),
+      timeMin: nextPrefetchStartDate.toISOString(),
     });
   }
-  
+
   // Check if we're approaching the past boundary and prefetch if needed
-  const timeToStartBoundary = currentDate.getTime() - new Date(timeMin).getTime();
+  const timeToStartBoundary =
+    currentDate.getTime() - new Date(timeMin).getTime();
   if (timeToStartBoundary <= prefetchThresholdMs) {
     const nextPrefetchStartDate = startOfMonth(subMonths(new Date(timeMin), 3));
     const nextPrefetchEndDate = endOfMonth(new Date(timeMin));
-    
+
     // Prefetch previous chunk
     void utils.calendar.getEvents.prefetch({
-      timeMin: nextPrefetchStartDate.toISOString(),
       timeMax: nextPrefetchEndDate.toISOString(),
+      timeMin: nextPrefetchStartDate.toISOString(),
     });
   }
 
@@ -112,7 +111,7 @@ export function BigCalendar() {
       ): Promise<CreateEventMutationContext> => {
         // Use the current timeMin and timeMax for this operation
         const queryKey = { timeMax, timeMin };
-        
+
         await utils.calendar.getEvents.cancel(queryKey);
         const previousEvents = utils.calendar.getEvents.getData(queryKey);
 
@@ -192,7 +191,7 @@ export function BigCalendar() {
       ): Promise<UpdateEventMutationContext> => {
         // Use the current timeMin and timeMax for this operation
         const queryKey = { timeMax, timeMin };
-        
+
         await utils.calendar.getEvents.cancel(queryKey);
         const previousEvents = utils.calendar.getEvents.getData(queryKey);
 
@@ -270,7 +269,7 @@ export function BigCalendar() {
       ): Promise<DeleteEventMutationContext> => {
         // Use the current timeMin and timeMax for this operation
         const queryKey = { timeMax, timeMin };
-        
+
         await utils.calendar.getEvents.cancel(queryKey);
         const previousEvents = utils.calendar.getEvents.getData(queryKey);
 
@@ -281,7 +280,11 @@ export function BigCalendar() {
               (event) => event.id !== deletedEventData.eventId,
             ) as GetEventsQueryOutput,
         );
-        return { deletedEventId: deletedEventData.eventId, previousEvents, queryKey };
+        return {
+          deletedEventId: deletedEventData.eventId,
+          previousEvents,
+          queryKey,
+        };
       },
       onSettled: (
         data,
