@@ -96,8 +96,8 @@ const EventWrapper = React.memo(
         borderClasses,
         className,
         {
-          "cursor-grabbing shadow-lg": isDragging,
-          "line-through": isEventInPast,
+          "cursor-grabbing": isDragging,
+          "line-through opacity-90": isEventInPast,
         },
       );
     }, [colorClasses, borderClasses, className, isDragging, isEventInPast]);

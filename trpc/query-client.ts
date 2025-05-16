@@ -17,7 +17,7 @@ export const createQueryClient = () =>
         deserializeData: SuperJSON.deserialize,
       },
       queries: {
-        gcTime: 5 * 60 * 1000,
+        gcTime: 24 * 60 * 60 * 1000, // 24 hours - matches the maxAge in persistQueryClient
         staleTime: 60 * 1000,
       },
     },

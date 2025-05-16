@@ -2,11 +2,17 @@
 
 import { useState } from "react";
 
-import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { type QueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import {
+  type PersistedClient,
+  type Persister,
+  PersistQueryClientProvider,
+} from "@tanstack/react-query-persist-client";
 import { httpBatchStreamLink, loggerLink } from "@trpc/client";
 import { createTRPCReact } from "@trpc/react-query";
 import { type inferRouterInputs, type inferRouterOutputs } from "@trpc/server";
+import { del as idbDel, get as idbGet, set as idbSet } from "idb-keyval";
 import SuperJSON from "superjson";
 
 import { type AppRouter } from "@/server/api/root";
@@ -14,31 +20,31 @@ import { type AppRouter } from "@/server/api/root";
 import { createQueryClient } from "./query-client";
 
 let clientQueryClientSingleton: QueryClient | undefined = undefined;
+
 const getQueryClient = () => {
   if (typeof window === "undefined") {
-    // Server: always make a new query client
     return createQueryClient();
   }
-  // Browser: use singleton pattern to keep the same query client
   clientQueryClientSingleton ??= createQueryClient();
-
   return clientQueryClientSingleton;
 };
 
+const createIDBPersister = (
+  idbKey: IDBValidKey = "react-query",
+): Persister => ({
+  persistClient: async (client: PersistedClient) => {
+    await idbSet(idbKey, client);
+  },
+  removeClient: async () => {
+    await idbDel(idbKey);
+  },
+  restoreClient: async () => {
+    return await idbGet<PersistedClient>(idbKey);
+  },
+});
+
 export const api = createTRPCReact<AppRouter>();
-
-/**
- * Inference helper for inputs.
- *
- * @example type HelloInput = RouterInputs['example']['hello']
- */
 export type RouterInputs = inferRouterInputs<AppRouter>;
-
-/**
- * Inference helper for outputs.
- *
- * @example type HelloOutput = RouterOutputs['example']['hello']
- */
 export type RouterOutputs = inferRouterOutputs<AppRouter>;
 
 export function TRPCReactProvider(props: { children: React.ReactNode }) {
@@ -65,14 +71,36 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
     }),
   );
 
+  const noopPersister: Persister = {
+    persistClient: async () => {},
+    removeClient: async () => {},
+    restoreClient: async () => undefined,
+  };
+
+  const [persister] = useState<Persister>(() =>
+    typeof window === "undefined"
+      ? noopPersister
+      : createIDBPersister("weekday-calendar"),
+  );
+
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      onSuccess={() => {
+        console.log("Persistence successful");
+      }}
+      client={queryClient}
+      persistOptions={{
+        buster: "v0.0.1",
+        maxAge: 1000 * 60 * 60 * 24,
+        persister,
+      }}
+    >
       <api.Provider client={trpcClient} queryClient={queryClient}>
         {props.children}
 
         <ReactQueryDevtools initialIsOpen={false} />
       </api.Provider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }
 
