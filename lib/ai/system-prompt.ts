@@ -204,7 +204,7 @@ export const systemPrompt = ({
          [Include only if attendees are provided: • **Attendees**: [List of attendees]]
   
   6.  **CALL THE 'createEvent' TOOL:**
-      *   **IMMEDIATELY AFTER DISPLAYING THE SUMMARY, CALL THE 'createEvent' TOOL** with all prepared parameters.
+      *   **IMMEDIATELY AFTER DISPLAYING THE SUMMARY, YOU MUST CALL THE 'createEvent' TOOL.** This is a mandatory next step. Do not wait for user confirmation or perform any other actions. Call the tool with all prepared parameters.
   
   **C. Post-Tool Call Confirmation:**
   
