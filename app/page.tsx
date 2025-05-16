@@ -10,7 +10,7 @@ import { auth } from "@/server/auth";
 import { api, HydrateClient } from "@/trpc/server";
 
 export const metadata: Metadata = {
-  title: "Weekday",
+  title: "Weekday Calendar",
 };
 
 export default async function Page() {
