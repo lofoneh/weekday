@@ -1,0 +1,65 @@
+{
+    "input": {
+        "timeMax": "2025-08-31T23:59:59.999Z",
+        "timeMin": "2025-02-01T00:00:00.000Z"
+    },
+    "result": {
+        "shape": {
+            "message": "HTTP error! status: 401 - Unauthorized",
+            "code": -32603,
+            "data": {
+                "code": "INTERNAL_SERVER_ERROR",
+                "httpStatus": 500,
+                "path": "calendar.getCalendars",
+                "zodError": null
+            }
+        },
+        "data": {
+            "code": "INTERNAL_SERVER_ERROR",
+            "httpStatus": 500,
+            "path": "calendar.getCalendars",
+            "zodError": null
+        },
+        "meta": {
+            "response": {}
+        },
+        "name": "TRPCClientError"
+    },
+    "elapsedMs": 449,
+    "context": {}
+}
+
+
+5996-b48a1daef47b05c9.js:1 
+ Uncaught (in promise) DataCloneError: Failed to execute 'put' on 'IDBObjectStore': #<Promise> could not be cloned.
+    at 5996-b48a1daef47b05c9.js:1:618
+    at 5996-b48a1daef47b05c9.js:1:446
+    at async Object.persistClient (page-4dfdf16efafdebab.js:1:91989)
+    at async l (5996-b48a1daef47b05c9.js:8:65536)
+1684-41ab28b217a91f9c.js:1 
+  << query #1 calendar.getCalendars 
+Object
+5996-b48a1daef47b05c9.js:1 
+ Uncaught (in promise) DataCloneError: Failed to execute 'put' on 'IDBObjectStore': #<Promise> could not be cloned.
+    at 5996-b48a1daef47b05c9.js:1:618
+    at 5996-b48a1daef47b05c9.js:1:446
+    at async Object.persistClient (page-4dfdf16efafdebab.js:1:91989)
+    at async l (5996-b48a1daef47b05c9.js:8:65536)
+1684-41ab28b217a91f9c.js:1 
+  << query #4 calendar.getCalendars 
+Object
+5996-b48a1daef47b05c9.js:1 
+ Uncaught (in promise) DataCloneError: Failed to execute 'put' on 'IDBObjectStore': #<Promise> could not be cloned.
+    at 5996-b48a1daef47b05c9.js:1:618
+    at 5996-b48a1daef47b05c9.js:1:446
+    at async Object.persistClient (page-4dfdf16efafdebab.js:1:91989)
+    at async l (5996-b48a1daef47b05c9.js:8:65536)
+1684-41ab28b217a91f9c.js:1 
+  << query #3 calendar.getEvents 
+Object
+5996-b48a1daef47b05c9.js:1 
+ Uncaught (in promise) DataCloneError: Failed to execute 'put' on 'IDBObjectStore': #<Promise> could not be cloned.
+    at 5996-b48a1daef47b05c9.js:1:618
+    at 5996-b48a1daef47b05c9.js:1:446
+    at async Object.persistClient (page-4dfdf16efafdebab.js:1:91989)
+    at async l (5996-b48a1daef47b05c9.js:8:65536)
