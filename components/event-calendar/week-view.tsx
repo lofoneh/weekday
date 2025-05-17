@@ -26,7 +26,7 @@ import {
   EventItem,
   isMultiDayEvent,
   useCurrentTimeIndicator,
-  WeekCellsHeight,
+  useDynamicWeekCellHeight,
 } from "@/components/event-calendar";
 import { EndHour, StartHour } from "@/components/event-calendar/constants";
 import { cn } from "@/lib/utils";
@@ -89,6 +89,12 @@ export const WeekView = React.memo(function WeekView({
       });
   }, [events, days]);
 
+  const showAllDaySection = useMemo(
+    () => allDayEvents.length > 0,
+    [allDayEvents],
+  );
+  const dynamicWeekCellsHeight = useDynamicWeekCellHeight(showAllDaySection);
+
   const processedDayEvents = useMemo(() => {
     const result = days.map((day) => {
       const dayEvents = events.filter((event) => {
@@ -138,8 +144,8 @@ export const WeekView = React.memo(function WeekView({
           getHours(adjustedStart) + getMinutes(adjustedStart) / 60;
         const endHour = getHours(adjustedEnd) + getMinutes(adjustedEnd) / 60;
 
-        const top = (startHour - StartHour) * WeekCellsHeight;
-        const height = (endHour - startHour) * WeekCellsHeight - 3;
+        const top = (startHour - StartHour) * dynamicWeekCellsHeight;
+        const height = (endHour - startHour) * dynamicWeekCellsHeight - 3;
 
         let columnIndex = 0;
         let placed = false;
@@ -188,7 +194,7 @@ export const WeekView = React.memo(function WeekView({
     });
 
     return result;
-  }, [days, events]);
+  }, [days, events, dynamicWeekCellsHeight]);
 
   const handleEventClick = useCallback(
     (event: CalendarEvent, e: React.MouseEvent) => {
@@ -212,7 +218,6 @@ export const WeekView = React.memo(function WeekView({
     [onEventCreate],
   );
 
-  const showAllDaySection = allDayEvents.length > 0;
   const { currentTimePosition, currentTimeVisible } = useCurrentTimeIndicator(
     currentDate,
     "week",
@@ -388,7 +393,15 @@ export const WeekView = React.memo(function WeekView({
   }, [days, showAllDaySection, renderAllDayEvents]);
 
   return (
-    <div className="flex h-full flex-col" data-slot="week-view">
+    <div
+      className="flex h-full flex-col"
+      style={
+        {
+          "--week-cells-height": `${dynamicWeekCellsHeight}px`,
+        } as React.CSSProperties
+      }
+      data-slot="week-view"
+    >
       <div className="bg-background/80 border-border/70 sticky top-0 z-30 grid grid-cols-8 border-y uppercase backdrop-blur-md">
         <div className="text-muted-foreground/70 py-2 text-center text-xs">
           <span className="max-[479px]:sr-only">{format(new Date(), "O")}</span>
