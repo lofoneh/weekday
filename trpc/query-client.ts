@@ -9,15 +9,13 @@ export const createQueryClient = () =>
     defaultOptions: {
       dehydrate: {
         serializeData: SuperJSON.serialize,
-        shouldDehydrateQuery: (query) =>
-          defaultShouldDehydrateQuery(query) ||
-          query.state.status === "pending",
+        shouldDehydrateQuery: (query) => defaultShouldDehydrateQuery(query),
       },
       hydrate: {
         deserializeData: SuperJSON.deserialize,
       },
       queries: {
-        gcTime: 24 * 60 * 60 * 1000, // 24 hours - matches the maxAge in persistQueryClient
+        gcTime: 24 * 60 * 60 * 1000,
         staleTime: 60 * 1000,
       },
     },
