@@ -1,9 +1,16 @@
 "use client";
 
 import * as React from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
-import { useAtom } from "jotai";
-import { atomWithStorage } from "jotai/utils";
+import { getCookie, setCookie } from "cookies-next";
 
 type ChatContextProps = {
   isChatOpen: boolean;
@@ -11,32 +18,51 @@ type ChatContextProps = {
   toggleChat: () => void;
 };
 
-const ChatContext = React.createContext<ChatContextProps | null>(null);
-
-const chatPanelAtom = atomWithStorage<boolean>("weekday_chat_panel", true);
+const ChatContext = createContext<ChatContextProps | null>(null);
 
 export function useChat() {
-  const context = React.useContext(ChatContext);
+  const context = useContext(ChatContext);
   if (!context) {
     throw new Error("useChat must be used within a ChatProvider");
   }
+
   return context;
 }
 
-export function ChatProvider({ children }: { children: React.ReactNode }) {
-  const [isChatOpen, setIsChatOpen] = useAtom(chatPanelAtom);
+type ChatProviderProps = {
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+};
 
-  const toggleChat = React.useCallback(() => {
-    setIsChatOpen((prev: boolean) => !prev);
-  }, [setIsChatOpen]);
+export function ChatProvider({
+  children,
+  defaultOpen = true,
+}: ChatProviderProps) {
+  const [isChatOpen, setIsChatOpenState] = useState(defaultOpen);
 
-  const contextValue = React.useMemo(
+  useEffect(() => {
+    const storedState = getCookie("chat:state");
+    if (storedState !== undefined) {
+      setIsChatOpenState(storedState === "true");
+    }
+  }, []);
+
+  const setIsChatOpen = (isOpen: boolean) => {
+    setIsChatOpenState(isOpen);
+    setCookie("chat:state", isOpen.toString());
+  };
+
+  const toggleChat = useCallback(() => {
+    setIsChatOpen(!isChatOpen);
+  }, [isChatOpen]);
+
+  const contextValue = useMemo(
     () => ({
       isChatOpen,
       setIsChatOpen,
       toggleChat,
     }),
-    [isChatOpen, setIsChatOpen, toggleChat],
+    [isChatOpen, toggleChat],
   );
 
   return (

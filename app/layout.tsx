@@ -1,6 +1,7 @@
-import { Monitoring } from "react-scan/monitoring/next"; // Import this first before React
+import { Monitoring } from "react-scan/monitoring/next";
 
 import { Geist, Geist_Mono } from "next/font/google";
+import { cookies } from "next/headers";
 import Script from "next/script";
 
 import { CalendarProvider } from "@/components/event-calendar/calendar-context";
@@ -21,11 +22,14 @@ const fontMono = Geist_Mono({
   variable: "--font-mono",
 });
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const chatCookie = (await cookies()).get("chat:state")?.value;
+  const chatDefaultOpen = chatCookie === "true";
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -44,7 +48,7 @@ export default function RootLayout({
           disableTransitionOnChange
           enableSystem
         >
-          <ChatProvider>
+          <ChatProvider defaultOpen={chatDefaultOpen}>
             <TRPCReactProvider>
               <CalendarProvider>
                 <Monitoring
