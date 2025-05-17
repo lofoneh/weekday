@@ -22,7 +22,7 @@ import {
   EventItem,
   isMultiDayEvent,
   useCurrentTimeIndicator,
-  WeekCellsHeight,
+  useDynamicWeekCellHeight,
 } from "@/components/event-calendar";
 import { EndHour, StartHour } from "@/components/event-calendar/constants";
 import { cn } from "@/lib/utils";
@@ -49,14 +49,6 @@ export function DayView({
   onEventCreate,
   onEventSelect,
 }: DayViewProps) {
-  const hours = useMemo(() => {
-    const dayStart = startOfDay(currentDate);
-    return eachHourOfInterval({
-      end: addHours(dayStart, EndHour - 1),
-      start: addHours(dayStart, StartHour),
-    });
-  }, [currentDate]);
-
   const dayEvents = useMemo(() => {
     return events
       .filter((event) => {
@@ -84,6 +76,17 @@ export function DayView({
       return !event.allDay && !isMultiDayEvent(event);
     });
   }, [dayEvents]);
+
+  const showAllDaySection = allDayEvents.length > 0;
+  const dynamicWeekCellsHeight = useDynamicWeekCellHeight(showAllDaySection);
+
+  const hours = useMemo(() => {
+    const dayStart = startOfDay(currentDate);
+    return eachHourOfInterval({
+      end: addHours(dayStart, EndHour - 1),
+      start: addHours(dayStart, StartHour),
+    });
+  }, [currentDate]);
 
   const positionedEvents = useMemo(() => {
     const result: PositionedEvent[] = [];
@@ -119,8 +122,8 @@ export function DayView({
       const startHour =
         getHours(adjustedStart) + getMinutes(adjustedStart) / 60;
       const endHour = getHours(adjustedEnd) + getMinutes(adjustedEnd) / 60;
-      const top = (startHour - StartHour) * WeekCellsHeight;
-      const height = (endHour - startHour) * WeekCellsHeight - 3;
+      const top = (startHour - StartHour) * dynamicWeekCellsHeight;
+      const height = (endHour - startHour) * dynamicWeekCellsHeight - 3;
 
       let columnIndex = 0;
       let placed = false;
@@ -163,21 +166,28 @@ export function DayView({
     });
 
     return result;
-  }, [currentDate, timeEvents]);
+  }, [currentDate, timeEvents, dynamicWeekCellsHeight]);
 
   const handleEventClick = (event: CalendarEvent, e: React.MouseEvent) => {
     e.stopPropagation();
     onEventSelect(event);
   };
 
-  const showAllDaySection = allDayEvents.length > 0;
   const { currentTimePosition, currentTimeVisible } = useCurrentTimeIndicator(
     currentDate,
     "day",
   );
 
   return (
-    <div className="contents" data-slot="day-view">
+    <div
+      className="contents"
+      style={
+        {
+          "--week-cells-height": `${dynamicWeekCellsHeight}px`,
+        } as React.CSSProperties
+      }
+      data-slot="day-view"
+    >
       {showAllDaySection && (
         <div className="border-border/70 bg-muted/50 border-t">
           <div className="grid grid-cols-[3rem_1fr] sm:grid-cols-[4rem_1fr]">

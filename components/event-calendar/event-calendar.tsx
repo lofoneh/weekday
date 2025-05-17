@@ -34,7 +34,6 @@ import {
   EventGap,
   EventHeight,
   MonthView,
-  WeekCellsHeight,
   WeekView,
 } from "@/components/event-calendar";
 import ThemeToggle from "@/components/theme-toggle";
@@ -306,7 +305,6 @@ export function EventCalendar({
         {
           "--event-gap": `${EventGap}px`,
           "--event-height": `${EventHeight}px`,
-          "--week-cells-height": `${WeekCellsHeight}px`,
         } as React.CSSProperties
       }
     >
