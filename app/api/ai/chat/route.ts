@@ -1,8 +1,7 @@
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { smoothStream, streamText } from "ai";
 import { v7 as uuidv7 } from "uuid";
 
-import { env } from "@/env";
+import { models } from "@/lib/ai/models";
 import { systemPrompt } from "@/lib/ai/system-prompt";
 import {
   createEvent,
@@ -19,10 +18,6 @@ export async function POST(req: Request) {
   const { messages } = await req.json();
 
   try {
-    const openrouter = createOpenRouter({
-      apiKey: env.OPENROUTER_API_KEY,
-    });
-
     const now = new Date();
     const currentDate = now.toISOString();
     const formattedDate = now.toLocaleDateString("en-US", {
@@ -38,7 +33,7 @@ export async function POST(req: Request) {
       experimental_transform: smoothStream({ chunking: "word" }),
       maxSteps: 25,
       messages,
-      model: openrouter.chat("google/gemini-2.5-flash-preview"),
+      model: models.openai,
       system: systemPrompt({ currentDate, formattedDate, timezone }),
       tools: {
         createEvent,
