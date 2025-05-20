@@ -17,7 +17,7 @@ export function ResizablePanelsClient() {
 
   return (
     <ResizablePanelGroup
-      className={cn("h-full", {
+      className={cn({
         "p-2": isMobile,
       })}
       direction="horizontal"

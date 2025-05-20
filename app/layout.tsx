@@ -28,9 +28,9 @@ export default async function RootLayout({
   const chatDefaultOpen = chatCookie === "true";
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html className="h-full" lang="en" suppressHydrationWarning>
       <body
-        className={`${fontSans.variable} ${fontMono.variable} bg-sidebar font-sans antialiased`}
+        className={`${fontSans.variable} ${fontMono.variable} bg-sidebar flex h-full flex-col font-sans antialiased`}
       >
         <ThemeProvider
           attribute="class"
