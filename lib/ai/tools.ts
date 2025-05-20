@@ -465,6 +465,49 @@ export const updateEvent = tool({
   },
 });
 
+export const deleteEvent = tool({
+  description:
+    "Deletes an existing event from the user's Google Calendar. Use this when a user wants to remove or cancel a meeting, appointment, or other calendar entry. This tool requires an event identifier (eventId). If the user refers to an event ambiguously (e.g., 'delete my meeting tomorrow at 10'), the eventId might need to be found using the 'Find Events' tool first.",
+  parameters: z.object({
+    calendarId: z
+      .string()
+      .default("primary")
+      .describe(
+        "The calendar ID where the event is located. Defaults to 'primary'.",
+      ),
+    eventId: z
+      .string()
+      .describe("The unique identifier of the event to delete."),
+  }),
+  execute: async ({ calendarId, eventId }) => {
+    try {
+      const success = await api.calendar.deleteEvent({
+        calendarId,
+        eventId,
+      });
+
+      if (success) {
+        return {
+          message: "Event deleted successfully.",
+          success: true,
+        };
+      } else {
+        return {
+          error: "Failed to delete the event.",
+          success: false,
+        };
+      }
+    } catch (error) {
+      console.error("Error deleting event with tool:", error);
+      const errorMessage =
+        typeof error === "object" && error !== null && "message" in error
+          ? String((error as { message: string }).message)
+          : "Failed to delete calendar event due to an unexpected error.";
+      return { error: errorMessage, success: false };
+    }
+  },
+});
+
 export const createEvent = tool({
   description:
     "Creates a new event in the user's Google Calendar. Use this to schedule meetings, appointments, or other calendar entries based on user-provided details like title, date, time, attendees, and location.",

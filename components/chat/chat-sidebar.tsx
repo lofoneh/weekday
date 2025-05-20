@@ -46,7 +46,8 @@ export function ChatSidebar() {
               const toolInvocation = part.toolInvocation as ToolInvocation;
               if (
                 toolInvocation.toolName === "createEvent" ||
-                toolInvocation.toolName === "updateEvent"
+                toolInvocation.toolName === "updateEvent" ||
+                toolInvocation.toolName === "deleteEvent"
               ) {
                 utils.calendar.getEvents.invalidate();
               }
@@ -57,7 +58,8 @@ export function ChatSidebar() {
       onToolCall: ({ toolCall }) => {
         if (
           toolCall.toolName === "createEvent" ||
-          toolCall.toolName === "updateEvent"
+          toolCall.toolName === "updateEvent" ||
+          toolCall.toolName === "deleteEvent"
         ) {
           utils.calendar.getEvents.invalidate();
         }

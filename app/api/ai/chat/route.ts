@@ -5,6 +5,7 @@ import { models } from "@/lib/ai/models";
 import { systemPrompt } from "@/lib/ai/system-prompt";
 import {
   createEvent,
+  deleteEvent,
   getEvent,
   getEvents,
   getFreeSlots,
@@ -37,6 +38,7 @@ export async function POST(req: Request) {
       system: systemPrompt({ currentDate, formattedDate, timezone }),
       tools: {
         createEvent,
+        deleteEvent,
         getEvent,
         getEvents,
         getFreeSlots,
