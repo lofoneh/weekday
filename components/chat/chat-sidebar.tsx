@@ -18,6 +18,7 @@ import { api } from "@/trpc/react";
 
 import { ChatPromptInput } from "./chat-prompt-input";
 import { CreateEventCall, CreateEventResult } from "./tools/create-event";
+import { DeleteEventCall, DeleteEventResult } from "./tools/delete-event";
 import { GetEventCall, GetEventResult } from "./tools/get-event";
 import { GetFreeSlotsCall, GetFreeSlotsResult } from "./tools/get-free-slots";
 import {
@@ -264,6 +265,31 @@ export function ChatSidebar() {
                         },
                         ({ toolInvocation }) => (
                           <GetFreeSlotsResult
+                            key={toolCallId}
+                            toolInvocation={toolInvocation as ToolInvocation}
+                          />
+                        ),
+                      )
+                      .with(
+                        {
+                          toolInvocation: {
+                            state: "call",
+                            toolName: "deleteEvent",
+                          },
+                          type: "tool-invocation",
+                        },
+                        () => <DeleteEventCall key={toolCallId} />,
+                      )
+                      .with(
+                        {
+                          toolInvocation: {
+                            state: "result",
+                            toolName: "deleteEvent",
+                          },
+                          type: "tool-invocation",
+                        },
+                        ({ toolInvocation }) => (
+                          <DeleteEventResult
                             key={toolCallId}
                             toolInvocation={toolInvocation as ToolInvocation}
                           />

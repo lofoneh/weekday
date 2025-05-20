@@ -481,29 +481,33 @@ export const deleteEvent = tool({
   }),
   execute: async ({ calendarId, eventId }) => {
     try {
-      const success = await api.calendar.deleteEvent({
+      const deletedEventDetails = await api.calendar.deleteEvent({
         calendarId,
         eventId,
       });
 
-      if (success) {
-        return {
-          message: "Event deleted successfully.",
-          success: true,
-        };
-      } else {
-        return {
-          error: "Failed to delete the event.",
-          success: false,
-        };
-      }
+      return {
+        deletedEvent: {
+          id: deletedEventDetails.id,
+          allDay: deletedEventDetails.allDay,
+          end: deletedEventDetails.end.toISOString(),
+          start: deletedEventDetails.start.toISOString(),
+          title: deletedEventDetails.title,
+        },
+        message: "Event deleted successfully.",
+        success: true,
+      };
     } catch (error) {
       console.error("Error deleting event with tool:", error);
       const errorMessage =
-        typeof error === "object" && error !== null && "message" in error
-          ? String((error as { message: string }).message)
-          : "Failed to delete calendar event due to an unexpected error.";
-      return { error: errorMessage, success: false };
+        error instanceof Error
+          ? error.message
+          : typeof error === "object" && error !== null && "message" in error
+            ? String((error as { message: string }).message)
+            : "Failed to delete calendar event due to an unexpected error.";
+
+      // Include eventId in the error response for context, if deletion failed
+      return { error: errorMessage, eventId, success: false };
     }
   },
 });

@@ -136,23 +136,77 @@ export const calendarRouter = createTRPCRouter({
         eventId: z.string(),
       }),
     )
-    .output(z.boolean())
+    .output(ProcessedCalendarEventSchema)
     .mutation(async ({ ctx, input }) => {
       const account = await getGoogleAccount(ctx.db, ctx.session.user.id);
 
       if (!account.accessToken) throw new Error("No access token found");
 
       const headers = createHeaders(account.accessToken);
-      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(input.calendarId)}/events/${encodeURIComponent(input.eventId)}`;
-      const options = createRequestOptions(headers, "DELETE");
+
+      let eventToReturn: any;
+      try {
+        const getUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(input.calendarId)}/events/${encodeURIComponent(input.eventId)}`;
+        const getOptions = createRequestOptions(headers);
+        const response = await executeRequest(
+          getUrl,
+          getOptions,
+          account,
+          ctx.session.user.id,
+        );
+        const item = await response.json();
+        if (response.status === 404) {
+          throw new Error("Event not found, cannot delete.");
+        }
+        if (!response.ok) {
+          const errorData = item as { error?: { message?: string } };
+          const errorMessage =
+            errorData.error?.message ||
+            `Failed to fetch event before deletion (status: ${response.status})`;
+          throw new Error(errorMessage);
+        }
+        eventToReturn = processEventData(item, input.calendarId);
+      } catch (error) {
+        console.error("Error fetching event before deletion in tRPC:", error);
+        if (error instanceof Error) {
+          throw error;
+        }
+        throw new Error(
+          "Failed to fetch event details before attempting deletion.",
+        );
+      }
+
+      const deleteUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(input.calendarId)}/events/${encodeURIComponent(input.eventId)}`;
+      const deleteOptions = createRequestOptions(headers, "DELETE");
 
       try {
-        await executeRequest(url, options, account, ctx.session.user.id);
+        const deleteResponse = await executeRequest(
+          deleteUrl,
+          deleteOptions,
+          account,
+          ctx.session.user.id,
+        );
+        if (!deleteResponse.ok && deleteResponse.status !== 204) {
+          let googleErrorMessage = "Failed to delete the event.";
+          try {
+            const errorBody = await deleteResponse.json();
+            googleErrorMessage =
+              errorBody?.error?.message || googleErrorMessage;
+          } catch (e) {
+            /* Ignore parsing error */
+          }
+          throw new Error(googleErrorMessage);
+        }
 
-        return true;
+        return eventToReturn;
       } catch (error) {
-        console.error("Error deleting event:", error);
-        throw error;
+        console.error("Error deleting event in tRPC:", error);
+        if (error instanceof Error) {
+          throw error;
+        }
+        throw new Error(
+          "Failed to delete the event after fetching its details.",
+        );
       }
     }),
 
