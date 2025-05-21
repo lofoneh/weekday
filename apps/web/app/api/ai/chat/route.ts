@@ -34,7 +34,7 @@ export async function POST(req: Request) {
       experimental_transform: smoothStream({ chunking: "word" }),
       maxSteps: 25,
       messages,
-      model: models.openai,
+      model: models.google,
       system: systemPrompt({ currentDate, formattedDate, timezone }),
       tools: {
         createEvent,
@@ -44,6 +44,9 @@ export async function POST(req: Request) {
         getFreeSlots,
         getNextUpcomingEvent,
         updateEvent,
+      },
+      onError: (error) => {
+        console.error("Error while streaming:", JSON.stringify(error, null, 2));
       },
     });
 

@@ -202,7 +202,6 @@ const createEventSchema = z.object({
       z.object({
         email: z
           .string()
-          .email({ message: "Invalid email format for attendee." })
           .describe("The email address of a person to invite to the event."),
       }),
     )
@@ -285,7 +284,7 @@ const updateEventSchema = z.object({
       z.object({
         email: z
           .string()
-          .email({ message: "Invalid email format for attendee to add." }),
+          .describe("List of new attendees (by email) to add to the event."),
       }),
     )
     .optional()
@@ -295,7 +294,9 @@ const updateEventSchema = z.object({
       z.object({
         email: z
           .string()
-          .email({ message: "Invalid email format for attendee to remove." }),
+          .describe(
+            "List of existing attendees (by email) to remove from the event.",
+          ),
       }),
     )
     .optional()
