@@ -1,4 +1,4 @@
-<h3 align="center">Weekday</h3>
+<h2 align="center">Weekday</h2>
 
 <p align="center">
     The open-source Google Calendar alternative.
