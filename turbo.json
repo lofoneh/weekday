@@ -1,0 +1,41 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [".env"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**"],
+      "env": [
+        "BETTER_AUTH_GOOGLE_ID",
+        "BETTER_AUTH_GOOGLE_SECRET",
+        "BETTER_AUTH_SECRET",
+        "BETTER_AUTH_URL",
+        "DATABASE_URL",
+        "OPENROUTER_API_KEY",
+        "GOOGLE_GENERATIVE_AI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "OPENAI_API_KEY"
+      ]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "studio": {
+      "cache": false,
+      "persistent": true
+    },
+    "generate": {
+      "cache": false,
+      "persistent": true
+    },
+    "push": {
+      "cache": false,
+      "persistent": true
+    },
+    "prebuild": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}
