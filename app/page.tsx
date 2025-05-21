@@ -10,6 +10,7 @@ import { auth } from "@/server/auth";
 import { api, HydrateClient } from "@/trpc/server";
 
 export const metadata: Metadata = {
+  description: "The open source Google Calendar alternative",
   title: "Weekday Calendar",
 };
 
