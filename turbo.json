@@ -29,6 +29,10 @@
       "cache": false,
       "persistent": true
     },
+    "migrate": {
+      "cache": false,
+      "persistent": true
+    },
     "push": {
       "cache": false,
       "persistent": true

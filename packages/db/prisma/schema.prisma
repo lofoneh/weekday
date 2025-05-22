@@ -10,18 +10,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Post {
-  id        Int      @id @default(autoincrement())
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  createdById String
-  createdBy   User   @relation(fields: [createdById], references: [id])
-
-  @@index([name])
-}
-
 model User {
   id            String    @id
   name          String
@@ -32,8 +20,6 @@ model User {
   updatedAt     DateTime
   sessions      Session[]
   accounts      Account[]
-
-  posts Post[]
 
   @@unique([email])
   @@map("user")
