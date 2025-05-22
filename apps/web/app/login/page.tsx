@@ -3,6 +3,7 @@
 import type { JSX, SVGProps } from "react";
 
 import { signIn } from "@weekday/auth/auth-client";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 
@@ -40,7 +41,7 @@ export default function Login() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50">
       <div className="flex flex-1 flex-col justify-center px-4 py-10 lg:px-6">
-        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="sm:mx-auto sm:w-full sm:max-w-sm">
           <div className="flex items-center space-x-1.5">
             <Logo
               className="h-7 w-7 text-neutral-900 dark:text-neutral-50"
@@ -53,16 +54,8 @@ export default function Login() {
           <h3 className="mt-6 text-lg font-semibold text-neutral-900 dark:text-neutral-50">
             Sign in to your account
           </h3>
-          <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-            Don&apos;t have an account?{" "}
-            <a
-              className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
-              href="#"
-            >
-              Sign up
-            </a>
-          </p>
-          <div className="mt-8 flex flex-col items-center space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4">
+
+          <div className="mt-4 flex flex-col items-center space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4">
             <Button
               variant="outline"
               className="mt-2 flex-1 items-center justify-center space-x-2 border-neutral-300 bg-white py-2 text-neutral-900 hover:bg-neutral-100 sm:mt-0 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-50 dark:hover:bg-neutral-700"
@@ -72,6 +65,18 @@ export default function Login() {
               <span className="text-sm font-medium">Login with Google</span>
             </Button>
           </div>
+
+          <p className="text-muted-foreground mt-4 text-xs">
+            By signing in, you agree to our{" "}
+            <Link className="underline underline-offset-4" href="/terms">
+              terms of service
+            </Link>{" "}
+            and{" "}
+            <Link className="underline underline-offset-4" href="/privacy">
+              privacy policy
+            </Link>
+            .
+          </p>
         </div>
       </div>
     </div>
