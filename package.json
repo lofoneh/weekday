@@ -7,7 +7,6 @@
   ],
   "packageManager": "bun@1.2.9",
   "scripts": {
-    "prebuild": "turbo run prebuild --filter=@weekday/db",
     "build": "turbo build",
     "clean": "git clean -xdf node_modules",
     "db:generate": "turbo run generate --filter=@weekday/db",
@@ -22,7 +21,7 @@
   },
   "devDependencies": {
     "prettier": "latest",
-    "turbo": "latest"
+    "turbo": "^2.3.0"
   },
   "dependencies": {
     "dotenv-cli": "^8.0.0"
