@@ -10,7 +10,7 @@ export default function PrivacyPage() {
     <div className="container mx-auto px-4 py-8">
       <h1 className="mb-4 text-3xl font-bold">Privacy Policy</h1>
       <p className="mb-4">
-        <strong>Last updated: May 21, 2025</strong>
+        <strong>Last updated: May 24, 2025</strong>
       </p>
 
       <h2 className="mt-6 mb-2 text-2xl font-bold">
@@ -207,6 +207,36 @@ export default function PrivacyPage() {
       <h2 className="mt-6 mb-2 text-2xl font-bold">
         Google User Data Handling
       </h2>
+
+      <h3 className="mt-4 mb-2 text-xl font-bold">
+        AI and Machine Learning Models
+      </h3>
+      <p className="mb-4">
+        <strong>
+          We explicitly affirm that Google Workspace APIs and any data obtained
+          through them are NOT used to develop, improve, or train generalized AI
+          and/or ML models.
+        </strong>
+      </p>
+      <ul className="mb-4 list-inside list-disc">
+        <li>
+          Any AI features in Weekday operate independently and do not use Google
+          Workspace API data for model training
+        </li>
+        <li>
+          Your Google Calendar data is processed solely for calendar
+          functionality and display purposes
+        </li>
+        <li>
+          No Google Workspace API data is fed into machine learning training
+          pipelines
+        </li>
+        <li>
+          AI models used in our application are pre-trained and do not learn
+          from or incorporate your Google Calendar data
+        </li>
+      </ul>
+
       <h3 className="mt-4 mb-2 text-xl font-bold">Data Access and Usage</h3>
       <p className="mb-2">
         We access the following Google user data through the Google Calendar
