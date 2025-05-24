@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 
 import { Logo } from "./logo";
 
-export const Header = ({ user }: { user: User }) => {
+export const Header = ({ user }: { user?: User }) => {
   const [menuState, setMenuState] = React.useState(false);
   const [scrolled, setScrolled] = React.useState(false);
 
@@ -66,7 +66,7 @@ export const Header = ({ user }: { user: User }) => {
               <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
                 <Button asChild size="sm" variant="outline">
                   <Link href={user ? "/calendar" : "/login"}>
-                    <span>Login</span>
+                    <span>{user ? "Dashboard" : "Login"}</span>
                   </Link>
                 </Button>
               </div>
