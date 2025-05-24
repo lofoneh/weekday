@@ -75,7 +75,7 @@ export function AppSidebar({
                   <SidebarMenuItem key={calendar.id}>
                     <SidebarMenuButton
                       asChild
-                      className="has-focus-visible:border-ring has-focus-visible:ring-ring/50 relative justify-between rounded-md has-focus-visible:ring-[3px] [&>svg]:size-auto"
+                      className="has-focus-visible:border-ring has-focus-visible:ring-ring/50 relative justify-between rounded-sm has-focus-visible:ring-[3px] [&>svg]:size-auto"
                     >
                       <span>
                         <span className="flex items-center justify-between gap-3 font-medium">

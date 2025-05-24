@@ -300,7 +300,7 @@ export function EventCalendar({
 
   return (
     <div
-      className="bg-background flex h-full flex-col rounded-2xl has-data-[slot=month-view]:flex-1"
+      className="bg-background flex h-full flex-col rounded-lg has-data-[slot=month-view]:flex-1"
       style={
         {
           "--event-gap": `${EventGap}px`,

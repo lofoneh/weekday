@@ -88,7 +88,7 @@ export function ChatSidebar() {
   }
 
   return (
-    <div className="bg-background flex h-full flex-1 flex-col gap-4 rounded-2xl pt-0">
+    <div className="bg-background flex h-full flex-1 flex-col gap-4 rounded-lg pt-0">
       <div className="relative flex h-[calc(100vh-1rem)] w-full flex-col overflow-hidden">
         <div className="flex w-full items-center justify-between border-b p-3">
           <div />
