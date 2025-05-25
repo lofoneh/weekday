@@ -1,5 +1,7 @@
+import { Analytics } from "@vercel/analytics/next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
+import Script from "next/script";
 
 import { CalendarProvider } from "@/components/event-calendar/calendar-context";
 import { Toaster } from "@/components/ui/sonner";
@@ -32,6 +34,11 @@ export default async function RootLayout({
       <body
         className={`${fontSans.variable} ${fontMono.variable} flex h-full flex-col font-sans antialiased`}
       >
+        <Script
+          data-website-id="e38b6ee0-5973-4bc6-8de4-78ab3e09d532"
+          src="https://analytics.duncan.land/script.js"
+          defer
+        />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -40,7 +47,10 @@ export default async function RootLayout({
         >
           <ChatProvider defaultOpen={chatDefaultOpen}>
             <TRPCReactProvider>
-              <CalendarProvider>{children}</CalendarProvider>
+              <CalendarProvider>
+                {children}
+                <Analytics />
+              </CalendarProvider>
               <Toaster />
             </TRPCReactProvider>
           </ChatProvider>
