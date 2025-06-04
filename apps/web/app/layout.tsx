@@ -31,6 +31,9 @@ export default async function RootLayout({
 
   return (
     <html className="h-full" lang="en" suppressHydrationWarning>
+      <head>
+        <link href="/favicon.svg" rel="icon" />
+      </head>
       <body
         className={`${fontSans.variable} ${fontMono.variable} flex h-full flex-col font-sans antialiased`}
       >
