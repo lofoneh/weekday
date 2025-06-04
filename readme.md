@@ -1,4 +1,8 @@
-<h2 align="center">Weekday</h2>
+<a href="https://weekday.so">
+  <img alt="Dub is the modern, open-source alternative to Google Calendar with smart features built in." src="https://github.com/user-attachments/assets/d2a60978-eb45-4a21-8fd1-5d562073bd9b">
+</a>
+
+<h3 align="center">Weekday Calendar</h3>
 
 <p align="center">
     The open-source Google Calendar alternative.
