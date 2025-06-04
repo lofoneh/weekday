@@ -5,7 +5,7 @@ import type { JSX, SVGProps } from "react";
 import { signIn } from "@weekday/auth/auth-client";
 import Link from "next/link";
 
-import { Logo } from "@/components/logo";
+import { LogoMarkDark, LogoMarkLight } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 
 const GoogleIcon = (
@@ -22,8 +22,9 @@ export default function Login() {
       <div className="flex flex-1 flex-col justify-center px-4 py-10 lg:px-6">
         <div className="sm:mx-auto sm:w-full sm:max-w-sm">
           <div className="flex items-center space-x-1.5">
-            <Logo
-              className="h-7 w-7 text-neutral-900 dark:text-neutral-50"
+            <LogoMarkDark className="h-8 w-8 dark:hidden" aria-hidden={true} />
+            <LogoMarkLight
+              className="hidden h-8 w-8 dark:block"
               aria-hidden={true}
             />
             <p className="text-lg font-medium text-neutral-900 dark:text-neutral-50">

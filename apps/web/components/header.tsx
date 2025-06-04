@@ -11,7 +11,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-import { Logo } from "./logo";
+import { LogoDark, LogoLight } from "./logo";
 
 export const Header = ({ user }: { user?: User }) => {
   const [menuState, setMenuState] = React.useState(false);
@@ -43,13 +43,14 @@ export const Header = ({ user }: { user?: User }) => {
                 aria-label="home"
                 href="/"
               >
-                <div className="flex items-center space-x-1.5">
-                  <Logo
-                    className="text-foreground h-7 w-7"
-                    aria-hidden={true}
-                  />
-                  <p className="text-foreground text-lg font-medium">Weekday</p>
-                </div>
+                <LogoDark
+                  className="text-foreground h-5 w-30 dark:hidden"
+                  aria-hidden={true}
+                />
+                <LogoLight
+                  className="text-foreground hidden h-5 w-30 dark:block"
+                  aria-hidden={true}
+                />
               </Link>
 
               <button

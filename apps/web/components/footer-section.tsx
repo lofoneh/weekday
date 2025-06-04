@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { Logo } from "./logo";
+import { LogoMarkDark, LogoMarkLight } from "./logo";
 
 const links = [
   {
@@ -28,10 +28,14 @@ export default function FooterSection() {
               aria-label="home"
               href="/"
             >
-              <div className="flex items-center space-x-1.5">
-                <Logo className="text-foreground h-7 w-7" aria-hidden={true} />
-                <p className="text-foreground text-lg font-medium">Weekday</p>
-              </div>
+              <LogoMarkDark
+                className="text-foreground h-8 w-8 dark:hidden"
+                aria-hidden={true}
+              />
+              <LogoMarkLight
+                className="text-foreground hidden h-8 w-8 dark:block"
+                aria-hidden={true}
+              />
             </Link>
             <span className="text-muted-foreground block text-center text-sm">
               © {new Date().getFullYear()} Weekday, All rights reserved
