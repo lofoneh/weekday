@@ -19,11 +19,11 @@ interface AgendaViewProps {
   onEventSelect: (event: CalendarEvent) => void;
 }
 
-export function AgendaView({
+export const AgendaView = ({
   currentDate,
   events,
   onEventSelect,
-}: AgendaViewProps) {
+}: AgendaViewProps) => {
   // Show events for the next days based on constant
   const days = useMemo(() => {
     console.log("Agenda view updating with date:", currentDate.toISOString());
@@ -91,4 +91,4 @@ export function AgendaView({
       )}
     </div>
   );
-}
+};

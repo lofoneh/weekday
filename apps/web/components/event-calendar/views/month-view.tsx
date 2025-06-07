@@ -42,12 +42,12 @@ interface MonthViewProps {
   onEventSelect: (event: CalendarEvent) => void;
 }
 
-export function MonthView({
+export const MonthView = ({
   currentDate,
   events,
   onEventCreate,
   onEventSelect,
-}: MonthViewProps) {
+}: MonthViewProps) => {
   const days = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(monthStart);
@@ -273,4 +273,4 @@ export function MonthView({
       </div>
     </div>
   );
-}
+};

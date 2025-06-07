@@ -43,12 +43,12 @@ interface PositionedEvent {
   zIndex: number;
 }
 
-export function DayView({
+export const DayView = ({
   currentDate,
   events,
   onEventCreate,
   onEventSelect,
-}: DayViewProps) {
+}: DayViewProps) => {
   const dayEvents = useMemo(() => {
     return events
       .filter((event) => {
@@ -311,4 +311,4 @@ export function DayView({
       </div>
     </div>
   );
-}
+};
