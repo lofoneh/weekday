@@ -15,6 +15,40 @@ export const ProcessedCalendarEventSchema = z.object({
   location: z.string().optional(),
   start: z.date(),
   title: z.string(),
+  organizer: z
+    .object({
+      id: z.string().optional(),
+      displayName: z.string().optional(),
+      email: z.string().optional(),
+      self: z.boolean().optional(),
+    })
+    .optional(),
+  creator: z
+    .object({
+      id: z.string().optional(),
+      displayName: z.string().optional(),
+      email: z.string().optional(),
+      self: z.boolean().optional(),
+    })
+    .optional(),
+  attendees: z
+    .array(
+      z.object({
+        id: z.string().optional(),
+        displayName: z.string().optional(),
+        email: z.string().optional(),
+        organizer: z.boolean().optional(),
+        self: z.boolean().optional(),
+        resource: z.boolean().optional(),
+        optional: z.boolean().optional(),
+        responseStatus: z
+          .enum(["needsAction", "declined", "tentative", "accepted"])
+          .optional(),
+        comment: z.string().optional(),
+        additionalGuests: z.number().optional(),
+      })
+    )
+    .optional(),
 });
 
 export type Account = {
@@ -70,6 +104,40 @@ export function processEventData(
     eventColor = GOOGLE_CALENDAR_COLORS[eventItem.colorId]?.color;
   }
 
+  // Extract organizer information
+  const organizer = eventItem.organizer
+    ? {
+        id: eventItem.organizer.id,
+        displayName: eventItem.organizer.displayName,
+        email: eventItem.organizer.email,
+        self: eventItem.organizer.self,
+      }
+    : undefined;
+
+  const creator = eventItem.creator
+    ? {
+        id: eventItem.creator.id,
+        displayName: eventItem.creator.displayName,
+        email: eventItem.creator.email,
+        self: eventItem.creator.self,
+      }
+    : undefined;
+
+  const attendees = eventItem.attendees
+    ? eventItem.attendees.map((attendee: any) => ({
+        id: attendee.id,
+        displayName: attendee.displayName,
+        email: attendee.email,
+        organizer: attendee.organizer,
+        self: attendee.self,
+        resource: attendee.resource,
+        optional: attendee.optional,
+        responseStatus: attendee.responseStatus,
+        comment: attendee.comment,
+        additionalGuests: attendee.additionalGuests,
+      }))
+    : undefined;
+
   return {
     id: eventItem.id,
     allDay: isAllDay,
@@ -80,6 +148,9 @@ export function processEventData(
     location: eventItem.location ?? undefined,
     start: new Date(startStr),
     title: eventItem.summary ?? "(No title)",
+    organizer,
+    creator,
+    attendees,
   };
 }
 
@@ -169,19 +240,16 @@ export function mergeAndSortBusyIntervals(
     const lastMergedInterval = mergedIntervals[mergedIntervals.length - 1]!;
 
     if (currentInterval.start.getTime() <= lastMergedInterval.end.getTime()) {
-      // Overlapping or adjacent interval, merge them
       if (currentInterval.end.getTime() > lastMergedInterval.end.getTime()) {
         lastMergedInterval.end = currentInterval.end;
       }
     } else {
-      // Non-overlapping interval, add it to the list
       mergedIntervals.push({ ...currentInterval });
     }
   }
   return mergedIntervals;
 }
 
-// Helper function to calculate free slots from merged busy intervals
 export function calculateFreeSlotsFromBusy(
   busyIntervals: Array<{ end: Date; start: Date }>,
   queryStartTime: Date,

@@ -1,7 +1,12 @@
-import type { CalendarEvent, EventColor } from "@/components/event-calendar";
-
 import { isSameDay } from "date-fns";
 import { match } from "ts-pattern";
+
+import type {
+  CalendarEvent,
+  EventColor,
+  EventPermissions,
+  UserEventRole,
+} from "./types";
 
 export function getEventColorClasses(color?: EventColor | string): string {
   const colorName = color || "blue";
@@ -181,4 +186,91 @@ export function addHoursToDate(date: Date, hours: number): Date {
   const result = new Date(date);
   result.setHours(result.getHours() + hours);
   return result;
+}
+
+export function getUserEventRole(event: CalendarEvent): UserEventRole {
+  if (event.organizer?.self === true) {
+    return "organizer";
+  }
+
+  if (event.creator?.self === true) {
+    return "organizer";
+  }
+
+  if (event.attendees && Array.isArray(event.attendees)) {
+    const userAttendee = event.attendees.find(
+      (attendee) => attendee.self === true,
+    );
+    if (userAttendee) {
+      return "attendee";
+    }
+  }
+
+  return "none";
+}
+
+export function getEventPermissions(event: CalendarEvent): EventPermissions {
+  const userRole = getUserEventRole(event);
+
+  return match(userRole)
+    .with("attendee", () => ({
+      canDelete: false,
+      canEdit: false,
+      canInvite: false,
+      canModify: false,
+      canSeeGuests: true,
+      userRole,
+    }))
+    .with("organizer", () => ({
+      canDelete: true,
+      canEdit: true,
+      canInvite: true,
+      canModify: true,
+      canSeeGuests: true,
+      userRole,
+    }))
+    .with("none", () => ({
+      canDelete: false,
+      canEdit: false,
+      canInvite: false,
+      canModify: false,
+      canSeeGuests: false,
+      userRole: "none" as const,
+    }))
+    .exhaustive();
+}
+
+export function validateEventPermission(
+  event: CalendarEvent,
+  action: "delete" | "edit" | "invite" | "modify",
+): boolean {
+  const permissions = getEventPermissions(event);
+
+  return match(action)
+    .with("delete", () => permissions.canDelete)
+    .with("edit", () => permissions.canEdit)
+    .with("invite", () => permissions.canInvite)
+    .with("modify", () => permissions.canModify)
+    .exhaustive();
+}
+
+export function getUserResponseStatus(event: CalendarEvent): string | null {
+  if (!event.attendees || !Array.isArray(event.attendees)) {
+    return null;
+  }
+
+  console.log("event", event);
+
+  const userAttendee = event.attendees.find(
+    (attendee) => attendee.self === true,
+  );
+
+  console.log("current attendee", userAttendee);
+
+  return userAttendee?.responseStatus || null;
+}
+
+export function canRespondToEvent(event: CalendarEvent): boolean {
+  const userRole = getUserEventRole(event);
+  return userRole === "attendee";
 }
