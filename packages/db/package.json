@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "main": "./index.ts",
   "types": "./index.ts",
+  "packageManager": "bun@1.2.9",
   "scripts": {
     "generate": "bun run with:env drizzle-kit generate",
     "migrate": "bun run with:env drizzle-kit migrate",

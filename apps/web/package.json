@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "packageManager": "bun@1.2.9",
   "scripts": {
     "build": "bun with:env next build",
     "dev": "bun with:env next dev --turbo",
@@ -91,7 +92,7 @@
     "prettier": "^3.5.3",
     "prettier-plugin-tailwindcss": "^0.6.11",
     "tailwindcss": "^4.0.15",
-    "typescript": "^5.8.2",
+    "typescript": "5.8.3",
     "typescript-eslint": "^8.27.0"
   },
   "overrides": {
