@@ -7,6 +7,7 @@ import {
   nextCookies,
 } from "better-auth/next-js";
 import { headers } from "next/headers";
+import { multiSession } from "better-auth/plugins";
 
 import { db, schema, eq } from "@weekday/db";
 import { env } from "@weekday/env";
@@ -19,11 +20,7 @@ const betterAuth = betterAuthClient({
   databaseHooks: {
     account: {
       create: {
-        async before(account) {
-          console.log(account, "account");
-        },
-        async after(account) {
-          // Handle Google accounts created without refresh tokens
+        async after(account, ctx) {
           if (account.providerId === "google" && !account.refreshToken) {
             try {
               await db
@@ -35,16 +32,96 @@ const betterAuth = betterAuthClient({
                 error
               );
             }
-          } else if (account.providerId === "google" && account.refreshToken) {
-            console.log(
-              `✅ Google account created successfully with refresh token for user ${account.userId}`
+            return;
+          }
+
+          if (account.accessToken && account.refreshToken) {
+            const provider = ctx?.context.socialProviders.find(
+              (p) => p.id === account.providerId
             );
+
+            if (provider) {
+              const info = await provider.getUserInfo({
+                accessToken: account.accessToken,
+                refreshToken: account.refreshToken,
+                scopes: account.scope?.split(",") ?? [],
+                idToken: account.idToken ?? undefined,
+              });
+
+              if (info?.user) {
+                await db.transaction(async (tx) => {
+                  await tx
+                    .update(schema.account)
+                    .set({
+                      name: info.user.name || "",
+                      email: info.user.email || "",
+                      image: info.user.image,
+                    })
+                    .where(eq(schema.account.id, account.id));
+
+                  await tx
+                    .update(schema.user)
+                    .set({
+                      defaultAccountId: account.id,
+                    })
+                    .where(eq(schema.user.id, account.userId));
+                });
+              }
+            }
+          }
+        },
+      },
+      update: {
+        async after(account, ctx) {
+          if (
+            account.providerId === "google" &&
+            account.accessToken &&
+            account.refreshToken
+          ) {
+            // Check if account needs user info update
+            const existingAccount = await db.query.account.findFirst({
+              where: eq(schema.account.id, account.id),
+            });
+
+            if (
+              existingAccount &&
+              (!existingAccount.name || !existingAccount.email)
+            ) {
+              const provider = ctx?.context.socialProviders.find(
+                (p) => p.id === account.providerId
+              );
+
+              if (provider) {
+                const info = await provider.getUserInfo({
+                  accessToken: account.accessToken,
+                  refreshToken: account.refreshToken,
+                  scopes: account.scope?.split(",") ?? [],
+                  idToken: account.idToken ?? undefined,
+                });
+
+                if (info?.user) {
+                  await db
+                    .update(schema.account)
+                    .set({
+                      name: info.user.name || "",
+                      email: info.user.email || "",
+                      image: info.user.image,
+                    })
+                    .where(eq(schema.account.id, account.id));
+                }
+              }
+            }
           }
         },
       },
     },
   },
-  plugins: [nextCookies()],
+  plugins: [
+    nextCookies(),
+    multiSession({
+      maximumSessions: 10,
+    }),
+  ],
   session: {
     expiresIn: 60 * 60 * 24 * 14,
     updateAge: 60 * 60 * 24,
@@ -71,6 +148,23 @@ const betterAuth = betterAuthClient({
         prompt: "consent",
         include_granted_scopes: "true",
       },
+    },
+  },
+  updateAccountOnSignIn: true,
+  user: {
+    additionalFields: {
+      defaultAccountId: {
+        type: "string",
+        required: false,
+        input: false,
+      },
+    },
+  },
+  account: {
+    accountLinking: {
+      enabled: true,
+      allowDifferentEmails: true,
+      trustedProviders: ["google"],
     },
   },
 });
