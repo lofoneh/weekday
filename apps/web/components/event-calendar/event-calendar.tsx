@@ -46,6 +46,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { useCalendarView } from "@/hooks/use-calendar-view";
 import { cn } from "@/lib/utils";
 
 import { useCalendarContext } from "./calendar-context";
@@ -53,35 +54,38 @@ import { useCalendarContext } from "./calendar-context";
 export interface EventCalendarProps {
   className?: string;
   events?: CalendarEvent[];
-  initialView?: CalendarView;
   isCreatingEvent?: boolean;
   isDeletingEvent?: boolean;
   isUpdatingEvent?: boolean;
   onEventAdd?: (event: CalendarEvent) => void;
   onEventDelete?: (eventId: string) => void;
   onEventUpdate?: (event: CalendarEvent) => void;
+  onResponseUpdate?: (
+    eventId: string,
+    response: "accepted" | "declined" | "tentative",
+  ) => void;
 }
 
 export function EventCalendar({
   className,
   events = [],
-  initialView = "week",
   isCreatingEvent = false,
   isDeletingEvent = false,
   isUpdatingEvent = false,
   onEventAdd,
   onEventDelete,
   onEventUpdate,
+  onResponseUpdate,
 }: EventCalendarProps) {
   const { currentDate, setCurrentDate } = useCalendarContext();
-  const [view, setView] = useState<CalendarView>(initialView);
+  const [calendarViewConfig, setCalendarViewConfig] = useCalendarView();
+  const view = calendarViewConfig.view;
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
     null,
   );
   const { open } = useSidebar();
 
-  // Memoize the events array to prevent unnecessary re-renders
   const memoizedEvents = useMemo(() => events, [events]);
 
   useEffect(() => {
@@ -96,10 +100,10 @@ export function EventCalendar({
       }
 
       match(e.key.toLowerCase())
-        .with("a", () => setView("agenda"))
-        .with("d", () => setView("day"))
-        .with("m", () => setView("month"))
-        .with("w", () => setView("week"))
+        .with("a", () => setCalendarViewConfig({ view: "agenda" }))
+        .with("d", () => setCalendarViewConfig({ view: "day" }))
+        .with("m", () => setCalendarViewConfig({ view: "month" }))
+        .with("w", () => setCalendarViewConfig({ view: "week" }))
         .otherwise(() => {});
     };
 
@@ -108,7 +112,7 @@ export function EventCalendar({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isEventDialogOpen]);
+  }, [isEventDialogOpen, setCalendarViewConfig]);
 
   const handlePrevious = useCallback(() => {
     match(view)
@@ -255,9 +259,12 @@ export function EventCalendar({
     setSelectedEvent(null);
   }, []);
 
-  const handleSetView = useCallback((newView: CalendarView) => {
-    setView(newView);
-  }, []);
+  const handleSetView = useCallback(
+    (newView: CalendarView) => {
+      setCalendarViewConfig({ view: newView });
+    },
+    [setCalendarViewConfig],
+  );
 
   const viewTitle = useMemo(() => {
     if (view === "month") {
@@ -440,6 +447,7 @@ export function EventCalendar({
         <EventDialog
           onClose={handleCloseEventDialog}
           onDelete={handleEventDelete}
+          onResponseUpdate={onResponseUpdate}
           onSave={handleEventSave}
           event={selectedEvent}
           isOpen={isEventDialogOpen}

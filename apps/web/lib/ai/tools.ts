@@ -1,9 +1,26 @@
+import { getActiveAccount } from "@weekday/api/src/utils/accounts";
+import { auth } from "@weekday/auth";
 import { ProcessedCalendarEventSchema } from "@weekday/lib";
 import { api } from "@weekday/web/trpc/server";
 import { tool } from "ai";
+import { headers } from "next/headers";
 import { z } from "zod";
 
 type ProcessedCalendarEvent = z.infer<typeof ProcessedCalendarEventSchema>;
+
+async function getActiveAccountId(): Promise<string | undefined> {
+  try {
+    const session = await auth();
+    if (!session?.user) return undefined;
+
+    const requestHeaders = await headers();
+    const activeAccount = await getActiveAccount(session.user, requestHeaders);
+    return activeAccount.id;
+  } catch (error) {
+    console.error("Error getting active account:", error);
+    return undefined;
+  }
+}
 
 export const getEvents = tool({
   description:
@@ -41,6 +58,8 @@ export const getEvents = tool({
   }),
   execute: async ({ end, endTime, includeAllDay, start, startTime }) => {
     try {
+      const activeAccountId = await getActiveAccountId();
+
       let fullEnd, fullStart;
 
       if (start.includes("T")) {
@@ -56,6 +75,7 @@ export const getEvents = tool({
       }
 
       const events = await api.calendar.getEvents({
+        accountId: activeAccountId,
         includeAllDay: includeAllDay,
         timeMax: fullEnd,
         timeMin: fullStart,
@@ -97,7 +117,10 @@ export const getEvent = tool({
   }),
   execute: async ({ calendarId, eventId }) => {
     try {
+      const activeAccountId = await getActiveAccountId();
+
       const event = await api.calendar.getEvent({
+        accountId: activeAccountId,
         calendarId,
         eventId,
       });
@@ -128,6 +151,8 @@ export const getNextUpcomingEvent = tool({
   parameters: z.object({}),
   execute: async () => {
     try {
+      const activeAccountId = await getActiveAccountId();
+
       const now = new Date();
       const timeMin = now.toISOString();
 
@@ -136,6 +161,7 @@ export const getNextUpcomingEvent = tool({
       const timeMax = timeMaxDate.toISOString();
 
       const eventsResponse = await api.calendar.getEvents({
+        accountId: activeAccountId,
         includeAllDay: false,
         maxResults: 10,
         timeMax,
@@ -236,6 +262,13 @@ const createEventSchema = z.object({
     .optional()
     .describe(
       "The physical location (e.g., 'Conference Room A', '123 Main St') or virtual meeting link for the event.",
+    ),
+  recurrence: z
+    .enum(["none", "daily", "weekly", "monthly", "yearly"])
+    .optional()
+    .default("none")
+    .describe(
+      "The recurrence pattern for the event. 'none' for single events, 'daily' for daily recurring, 'weekly' for weekly recurring, 'monthly' for monthly recurring, 'yearly' for yearly recurring.",
     ),
   reminders: z
     .array(
@@ -391,10 +424,13 @@ export const updateEvent = tool({
     summary,
   }: z.infer<typeof updateEventSchema>) => {
     try {
+      const activeAccountId = await getActiveAccountId();
+
       // Note: This tool assumes the caller has already fetched the event details
       // using the getEvent tool and is providing the necessary information for updates
 
       const updatePayload: any = {
+        accountId: activeAccountId,
         calendarId: "primary",
         event: {},
         eventId,
@@ -481,7 +517,10 @@ export const deleteEvent = tool({
   }),
   execute: async ({ calendarId, eventId }) => {
     try {
+      const activeAccountId = await getActiveAccountId();
+
       const deletedEventDetails = await api.calendar.deleteEvent({
+        accountId: activeAccountId,
         calendarId,
         eventId,
       });
@@ -522,11 +561,14 @@ export const createEvent = tool({
     description,
     endTime,
     location,
+    recurrence,
     reminders,
     startTime,
     summary,
   }: z.infer<typeof createEventSchema>) => {
     try {
+      const activeAccountId = await getActiveAccountId();
+
       const parsedStartTime = new Date(startTime);
       const parsedEndTime = new Date(endTime);
 
@@ -541,6 +583,7 @@ export const createEvent = tool({
       }
 
       const createdEvent = await api.calendar.createEvent({
+        accountId: activeAccountId,
         calendarId: "primary",
         createMeetLink: createMeetLink ?? false,
         event: {
@@ -548,6 +591,7 @@ export const createEvent = tool({
           description,
           end: parsedEndTime,
           location,
+          recurrence,
           reminders: remindersPayload as any,
           start: parsedStartTime,
           title: summary,
@@ -574,6 +618,86 @@ export const createEvent = tool({
         typeof error === "object" && error !== null && "message" in error
           ? String((error as { message: string }).message)
           : "Failed to create calendar event due to an unexpected error.";
+      return { error: errorMessage };
+    }
+  },
+});
+
+export const createRecurringEvent = tool({
+  description:
+    "Creates a new recurring event in the user's Google Calendar. Use this specifically when a user wants to create repeating events like daily meetings, weekly standup, monthly reviews, etc. This tool handles recurring patterns including daily, weekly, monthly, or yearly recurrence.",
+  parameters: createEventSchema.omit({ recurrence: true }).extend({
+    recurrence: z
+      .enum(["daily", "weekly", "monthly", "yearly"])
+      .describe(
+        "The recurrence pattern for the event. Required field - must be one of: 'daily', 'weekly', 'monthly', or 'yearly'.",
+      ),
+  }),
+  execute: async ({
+    attendees,
+    createMeetLink,
+    description,
+    endTime,
+    location,
+    recurrence,
+    reminders,
+    startTime,
+    summary,
+  }: z.infer<typeof createEventSchema> & {
+    recurrence: "daily" | "monthly" | "weekly" | "yearly";
+  }) => {
+    try {
+      const activeAccountId = await getActiveAccountId();
+
+      const parsedStartTime = new Date(startTime);
+      const parsedEndTime = new Date(endTime);
+
+      let remindersPayload:
+        | { overrides: typeof reminders; useDefault: boolean }
+        | undefined;
+      if (reminders && reminders.length > 0) {
+        remindersPayload = {
+          overrides: reminders,
+          useDefault: false,
+        };
+      }
+
+      const createdEvent = await api.calendar.createEvent({
+        accountId: activeAccountId,
+        calendarId: "primary",
+        createMeetLink: createMeetLink ?? false,
+        event: {
+          attendees,
+          description,
+          end: parsedEndTime,
+          location,
+          recurrence,
+          reminders: remindersPayload as any,
+          start: parsedStartTime,
+          title: summary,
+        },
+      });
+
+      return {
+        event: {
+          id: createdEvent.id,
+          allDay: createdEvent.allDay,
+          calendarId: createdEvent.calendarId,
+          description: createdEvent.description,
+          end: createdEvent.end.toISOString(),
+          location: createdEvent.location,
+          recurrence,
+          start: createdEvent.start.toISOString(),
+          title: createdEvent.title,
+        },
+        message: `Recurring event created successfully. This event will repeat ${recurrence}.`,
+      };
+    } catch (error) {
+      console.error("Error creating recurring event with tool:", error);
+      const errorMessage =
+        typeof error === "object" && error !== null && "message" in error
+          ? String((error as { message: string }).message)
+          : "Failed to create recurring calendar event due to an unexpected error.";
       return { error: errorMessage };
     }
   },
@@ -623,7 +747,10 @@ export const getFreeSlots = tool({
     timeZone,
   }: z.infer<typeof getFreeSlotsSchema>) => {
     try {
+      const activeAccountId = await getActiveAccountId();
+
       const freeBusyInfo = await api.calendar.getFreeSlots({
+        accountId: activeAccountId,
         calendarIds,
         timeMax,
         timeMin,

@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from "react";
 
-import type { CalendarEvent, EventColor } from "@/components/event-calendar";
+import type {
+  CalendarEvent,
+  EventColor,
+  RecurrenceType,
+} from "@/components/event-calendar";
 
 import { RiCalendarLine, RiDeleteBinLine } from "@remixicon/react";
 import { format, isBefore } from "date-fns";
@@ -13,6 +17,11 @@ import {
   EndHour,
   StartHour,
 } from "@/components/event-calendar/constants";
+import {
+  canRespondToEvent,
+  getEventPermissions,
+  getUserResponseStatus,
+} from "@/components/event-calendar/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -48,30 +57,173 @@ interface EventDialogProps {
   onClose: () => void;
   onDelete: (eventId: string) => void;
   onSave: (event: CalendarEvent) => void;
+  onResponseUpdate?: (
+    eventId: string,
+    response: "accepted" | "declined" | "tentative",
+  ) => void;
 }
 
-// Pre-compute time options once outside of the component
 const timeOptions = (() => {
   const options = [];
+
   for (let hour = StartHour; hour <= EndHour; hour++) {
     for (let minute = 0; minute < 60; minute += 15) {
       const formattedHour = hour.toString().padStart(2, "0");
       const formattedMinute = minute.toString().padStart(2, "0");
       const value = `${formattedHour}:${formattedMinute}`;
-      // Use a fixed date to avoid unnecessary date object creations
       const date = new Date(2000, 0, 1, hour, minute);
       const label = format(date, "h:mm a");
       options.push({ label, value });
     }
   }
+
   return options;
 })();
+
+const AttendeeEventView = ({
+  event,
+  onClose,
+  onResponseUpdate,
+}: {
+  event: CalendarEvent;
+  onClose: () => void;
+  onResponseUpdate: (
+    eventId: string,
+    response: "accepted" | "declined" | "tentative",
+  ) => void;
+}) => {
+  const currentResponse = getUserResponseStatus(event);
+  const canRespond = canRespondToEvent(event);
+
+  const handleResponseUpdate = (
+    response: "accepted" | "declined" | "tentative",
+  ) => {
+    if (event.id) {
+      onResponseUpdate(event.id, response);
+    }
+  };
+
+  return (
+    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Event Details</DialogTitle>
+          <DialogDescription className="sr-only">
+            View event details and respond to invitation
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4 py-4">
+          <div className="*:not-first:mt-1.5">
+            <Label htmlFor="title">Title</Label>
+            <div className="bg-muted rounded-md px-3 py-2 text-sm font-medium">
+              {event.title || "(No title)"}
+            </div>
+          </div>
+
+          {event.description && (
+            <div className="*:not-first:mt-1.5">
+              <Label htmlFor="description">Description</Label>
+              <div className="bg-muted rounded-md px-3 py-2 text-sm">
+                {event.description}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="*:not-first:mt-1.5">
+              <Label>Start</Label>
+              <div className="bg-muted rounded-md px-3 py-2 text-sm">
+                {event.allDay
+                  ? "All day"
+                  : format(new Date(event.start), "PPP p")}
+              </div>
+            </div>
+            <div className="*:not-first:mt-1.5">
+              <Label>End</Label>
+              <div className="bg-muted rounded-md px-3 py-2 text-sm">
+                {event.allDay
+                  ? "All day"
+                  : format(new Date(event.end), "PPP p")}
+              </div>
+            </div>
+          </div>
+
+          {event.location && (
+            <div className="*:not-first:mt-1.5">
+              <Label>Location</Label>
+              <div className="bg-muted rounded-md px-3 py-2 text-sm">
+                {event.location}
+              </div>
+            </div>
+          )}
+
+          {event.organizer && (
+            <div className="*:not-first:mt-1.5">
+              <Label>Organizer</Label>
+              <div className="bg-muted rounded-md px-3 py-2 text-sm">
+                {event.organizer.displayName || event.organizer.email}
+              </div>
+            </div>
+          )}
+
+          {canRespond && (
+            <div className="*:not-first:mt-1.5">
+              <Label>Your Response</Label>
+              <div className="mt-2 flex gap-2">
+                <Button
+                  size="sm"
+                  variant={
+                    currentResponse === "accepted" ? "default" : "outline"
+                  }
+                  onClick={() => handleResponseUpdate("accepted")}
+                >
+                  Accept
+                </Button>
+                <Button
+                  size="sm"
+                  variant={
+                    currentResponse === "tentative" ? "default" : "outline"
+                  }
+                  onClick={() => handleResponseUpdate("tentative")}
+                >
+                  Maybe
+                </Button>
+                <Button
+                  size="sm"
+                  variant={
+                    currentResponse === "declined" ? "default" : "outline"
+                  }
+                  onClick={() => handleResponseUpdate("declined")}
+                >
+                  Decline
+                </Button>
+              </div>
+              {currentResponse && (
+                <div className="text-muted-foreground mt-1 text-xs">
+                  Current response: {currentResponse}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 export function EventDialog({
   event,
   isOpen,
   onClose,
   onDelete,
+  onResponseUpdate,
   onSave,
 }: EventDialogProps) {
   const [formState, setFormState] = useState({
@@ -81,6 +233,7 @@ export function EventDialog({
     endDate: new Date(),
     endTime: `${DefaultEndHour}:00`,
     location: "",
+    recurrence: "none" as RecurrenceType,
     startDate: new Date(),
     startTime: `${DefaultStartHour}:00`,
     title: "",
@@ -90,8 +243,6 @@ export function EventDialog({
     endDateOpen: false,
     startDateOpen: false,
   });
-
-  // Initialize form with event data when it changes
 
   useEffect(() => {
     if (event) {
@@ -105,6 +256,7 @@ export function EventDialog({
         endDate: end,
         endTime: formatTimeForInput(end),
         location: event.location || "",
+        recurrence: event.recurrence || "none",
         startDate: start,
         startTime: formatTimeForInput(start),
         title: event.title || "",
@@ -123,6 +275,7 @@ export function EventDialog({
       endDate: new Date(),
       endTime: `${DefaultEndHour}:00`,
       location: "",
+      recurrence: "none" as RecurrenceType,
       startDate: new Date(),
       startTime: `${DefaultStartHour}:00`,
       title: "",
@@ -167,13 +320,11 @@ export function EventDialog({
       end.setHours(23, 59, 59, 999);
     }
 
-    // Validate that end date is not before start date
     if (isBefore(end, start)) {
       setError("End date cannot be before start date");
       return;
     }
 
-    // Use generic title if empty
     const eventTitle = formState.title.trim() ? formState.title : "(no title)";
 
     onSave({
@@ -183,6 +334,7 @@ export function EventDialog({
       description: formState.description,
       end,
       location: formState.location,
+      recurrence: formState.recurrence,
       start,
       title: eventTitle,
     });
@@ -194,7 +346,6 @@ export function EventDialog({
     }
   };
 
-  // Updated color options to match types.ts
   const colorOptions: Array<{
     bgClass: string;
     borderClass: string;
@@ -248,6 +399,22 @@ export function EventDialog({
     setUiState((prev) => ({ ...prev, endDateOpen: open }));
   };
 
+  const permissions = event?.id ? getEventPermissions(event) : null;
+
+  if (
+    event?.id &&
+    permissions?.userRole === "attendee" &&
+    !permissions.canEdit
+  ) {
+    return (
+      <AttendeeEventView
+        onClose={onClose}
+        onResponseUpdate={onResponseUpdate || (() => {})}
+        event={event}
+      />
+    );
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[425px]">
@@ -264,6 +431,7 @@ export function EventDialog({
             {error}
           </div>
         )}
+
         <div className="grid gap-4 py-4">
           <div className="*:not-first:mt-1.5">
             <Label htmlFor="title">Title</Label>
@@ -445,6 +613,27 @@ export function EventDialog({
           </div>
 
           <div className="*:not-first:mt-1.5">
+            <Label htmlFor="recurrence">Repeat</Label>
+            <Select
+              value={formState.recurrence}
+              onValueChange={(value: RecurrenceType) =>
+                updateFormField("recurrence", value)
+              }
+            >
+              <SelectTrigger id="recurrence">
+                <SelectValue placeholder="Does not repeat" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Does not repeat</SelectItem>
+                <SelectItem value="daily">Every day</SelectItem>
+                <SelectItem value="weekly">Every week</SelectItem>
+                <SelectItem value="monthly">Every month</SelectItem>
+                <SelectItem value="yearly">Every year</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="*:not-first:mt-1.5">
             <Label htmlFor="location">Location</Label>
             <Input
               id="location"
@@ -481,7 +670,7 @@ export function EventDialog({
           </fieldset>
         </div>
         <DialogFooter className="flex-row sm:justify-between">
-          {event?.id && (
+          {event?.id && (!permissions || permissions.canDelete) && (
             <Button
               size="icon"
               variant="outline"
@@ -496,7 +685,9 @@ export function EventDialog({
             <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button onClick={handleSave}>Save</Button>
+            {(!event?.id || !permissions || permissions.canEdit) && (
+              <Button onClick={handleSave}>Save</Button>
+            )}
           </div>
         </DialogFooter>
       </DialogContent>
