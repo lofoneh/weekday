@@ -20,7 +20,7 @@ import {
   ProcessedCalendarListEntrySchema,
   TimeSlotSchema,
 } from "./schema";
-import { getAllAccounts } from "../utils/accounts";
+import { fetchUserAccountCollection } from "../utils/accounts";
 
 // TODO: db: any -> PrismaClient
 async function createGoogleCalendarClient(
@@ -703,7 +703,10 @@ export const calendarRouter = createTRPCRouter({
       ),
     )
     .query(async ({ ctx }) => {
-      const accounts = await getAllAccounts(ctx.session.user, ctx.headers);
+      const accounts = await fetchUserAccountCollection(
+        ctx.session.user,
+        ctx.headers,
+      );
 
       const accountsWithCalendars = await Promise.all(
         accounts.map(async (account) => {

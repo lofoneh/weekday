@@ -1,29 +1,39 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { z } from "zod";
 
 import { account, user } from "@weekday/db";
 
 import { createTRPCRouter, protectedProcedure } from "../trpc";
-import { getActiveAccount, getAllAccounts } from "../utils/accounts";
+import {
+  getCurrentUserAccount,
+  fetchUserAccountCollection,
+} from "../utils/accounts";
 
 export const accountRouter = createTRPCRouter({
-  list: protectedProcedure.query(async ({ ctx }) => {
-    const accounts = await getAllAccounts(ctx.session.user, ctx.headers);
+  fetchAll: protectedProcedure.query(async ({ ctx }) => {
+    const userAccountData = await fetchUserAccountCollection(
+      ctx.session.user,
+      ctx.headers,
+    );
 
     return {
-      accounts,
+      accounts: userAccountData,
     };
   }),
 
-  setDefault: protectedProcedure
+  updatePrimary: protectedProcedure
     .input(z.object({ accountId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const foundAccount = await ctx.db.query.account.findFirst({
-        where: (table, { eq }) => eq(table.id, input.accountId),
+      const targetAccount = await ctx.db.query.account.findFirst({
+        where: (table, { eq, and }) =>
+          and(
+            eq(table.id, input.accountId),
+            eq(table.userId, ctx.session.user.id),
+          ),
       });
 
-      if (!foundAccount) {
+      if (!targetAccount) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Account not found",
@@ -36,32 +46,45 @@ export const accountRouter = createTRPCRouter({
         .where(eq(user.id, ctx.session.user.id));
     }),
 
-  getDefault: protectedProcedure.query(async ({ ctx }) => {
-    const account = await getActiveAccount(ctx.session.user, ctx.headers);
-    return { account };
+  retrievePrimary: protectedProcedure.query(async ({ ctx }) => {
+    const primaryAccount = await getCurrentUserAccount(
+      ctx.session.user,
+      ctx.headers,
+    );
+    return { account: primaryAccount };
   }),
 
-  delete: protectedProcedure
+  remove: protectedProcedure
     .input(z.object({ accountId: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      const targetAccountId = input.accountId;
+
       await ctx.db
         .delete(account)
         .where(
-          and(
-            eq(account.id, input.accountId),
-            eq(account.userId, ctx.session.user.id)
-          )
+          and(eq(account.id, targetAccountId), eq(account.userId, userId)),
         );
 
-      const activeAccount = await getActiveAccount(
+      const currentPrimaryAccount = await getCurrentUserAccount(
         ctx.session.user,
-        ctx.headers
+        ctx.headers,
       );
-      if (activeAccount.id === input.accountId) {
+
+      if (currentPrimaryAccount.id === targetAccountId) {
+        const remainingAccounts = await ctx.db.query.account.findMany({
+          where: (table, { eq, and }) =>
+            and(eq(table.userId, userId), ne(table.id, targetAccountId)),
+          limit: 1,
+        });
+
+        const newPrimaryId =
+          remainingAccounts.length > 0 ? remainingAccounts[0]!.id : null;
+
         await ctx.db
           .update(user)
-          .set({ defaultAccountId: null })
-          .where(eq(user.id, ctx.session.user.id));
+          .set({ defaultAccountId: newPrimaryId })
+          .where(eq(user.id, userId));
       }
     }),
 });

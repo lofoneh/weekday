@@ -47,11 +47,14 @@ export function AppSidebar({
       staleTime: 1000 * 30,
     });
 
-  const { data: defaultAccount } = api.account.getDefault.useQuery(undefined, {
-    gcTime: 1000 * 60 * 60 * 24,
-    refetchOnWindowFocus: false,
-    staleTime: 1000 * 60 * 5,
-  });
+  const { data: defaultAccount } = api.account.retrievePrimary.useQuery(
+    undefined,
+    {
+      gcTime: 1000 * 60 * 60 * 24,
+      refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 5,
+    },
+  );
 
   return (
     <Sidebar

@@ -1,4 +1,4 @@
-import { getActiveAccount } from "@weekday/api/src/utils/accounts";
+import { getCurrentUserAccount } from "@weekday/api/src/utils/accounts";
 import { auth } from "@weekday/auth";
 import { ProcessedCalendarEventSchema } from "@weekday/lib";
 import { api } from "@weekday/web/trpc/server";
@@ -14,7 +14,10 @@ async function getActiveAccountId(): Promise<string | undefined> {
     if (!session?.user) return undefined;
 
     const requestHeaders = await headers();
-    const activeAccount = await getActiveAccount(session.user, requestHeaders);
+    const activeAccount = await getCurrentUserAccount(
+      session.user,
+      requestHeaders,
+    );
     return activeAccount.id;
   } catch (error) {
     console.error("Error getting active account:", error);

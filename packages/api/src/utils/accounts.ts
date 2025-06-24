@@ -4,72 +4,95 @@ import { cache } from "react";
 import { authInstance as auth, type Session } from "@weekday/auth";
 import { db } from "@weekday/db";
 
-export const getActiveAccount = cache(
-  async (user: Session["user"], headers: Headers) => {
-    if (user?.defaultAccountId) {
-      const activeAccount = await db.query.account.findFirst({
-        where: (table, { eq, and }) =>
+export const getCurrentUserAccount = cache(
+  async (currentUser: Session["user"], requestHeaders: Headers) => {
+    const primaryAccountId = currentUser?.defaultAccountId;
+
+    if (primaryAccountId) {
+      const selectedAccount = await db.query.account.findFirst({
+        where: (accountTable, { eq, and }) =>
           and(
-            eq(table.userId, user.id),
-            eq(table.id, user.defaultAccountId as string)
+            eq(accountTable.userId, currentUser.id),
+            eq(accountTable.id, primaryAccountId as string),
           ),
       });
 
-      if (activeAccount) {
-        const { accessToken } = await auth.api.getAccessToken({
-          body: {
-            providerId: activeAccount?.providerId,
-            accountId: activeAccount?.id,
-            userId: activeAccount?.userId,
-          },
-          headers,
-        });
+      if (selectedAccount) {
+        try {
+          const tokenResponse = await auth.api.getAccessToken({
+            body: {
+              providerId: selectedAccount.providerId,
+              accountId: selectedAccount.id,
+              userId: selectedAccount.userId,
+            },
+            headers: requestHeaders,
+          });
 
-        return {
-          ...activeAccount,
-          accessToken: accessToken ?? activeAccount.accessToken,
-        };
+          return {
+            ...selectedAccount,
+            accessToken:
+              tokenResponse.accessToken ?? selectedAccount.accessToken,
+          };
+        } catch (error) {
+          console.error("Failed to refresh token:", error);
+          return selectedAccount;
+        }
       }
     }
 
-    const firstAccount = await db.query.account.findFirst({
-      where: (table, { eq }) => eq(table.userId, user.id),
+    const fallbackAccount = await db.query.account.findFirst({
+      where: (accountTable, { eq }) => eq(accountTable.userId, currentUser.id),
+      orderBy: (accountTable, { asc }) => [asc(accountTable.createdAt)],
     });
 
-    if (!firstAccount) {
-      throw new Error("No account found");
+    if (!fallbackAccount) {
+      throw new Error("User has no connected accounts");
     }
 
-    return firstAccount;
-  }
+    return fallbackAccount;
+  },
 );
 
-export const getAllAccounts = cache(
-  async (user: Session["user"], headers: Headers) => {
-    const _accounts = await db.query.account.findMany({
-      where: (table, { eq }) => eq(table.userId, user.id),
+export const fetchUserAccountCollection = cache(
+  async (currentUser: Session["user"], requestHeaders: Headers) => {
+    const userAccountsList = await db.query.account.findMany({
+      where: (accountTable, { eq }) => eq(accountTable.userId, currentUser.id),
+      orderBy: (accountTable, { desc }) => [desc(accountTable.createdAt)],
     });
 
-    const accounts = await Promise.all(
-      _accounts.map(async (account) => {
-        const { accessToken } = await auth.api.getAccessToken({
-          body: {
-            providerId: account.providerId,
-            accountId: account.id,
-            userId: account.userId,
-          },
-          headers,
-        });
+    const enrichedAccountsList = await Promise.all(
+      userAccountsList.map(async (accountRecord) => {
+        try {
+          const tokenResponse = await auth.api.getAccessToken({
+            body: {
+              providerId: accountRecord.providerId,
+              accountId: accountRecord.id,
+              userId: accountRecord.userId,
+            },
+            headers: requestHeaders,
+          });
 
-        return {
-          ...account,
-          accessToken: accessToken ?? account.accessToken,
-        };
-      })
+          return {
+            ...accountRecord,
+            accessToken: tokenResponse.accessToken ?? accountRecord.accessToken,
+          };
+        } catch (tokenError) {
+          console.warn(
+            `Token refresh failed for account ${accountRecord.id}:`,
+            tokenError,
+          );
+          return accountRecord;
+        }
+      }),
     );
 
-    return accounts.filter(
-      (account) => account.accessToken && account.refreshToken
-    );
-  }
+    const validAccountsList = enrichedAccountsList.filter((accountRecord) => {
+      const hasValidTokens =
+        accountRecord.accessToken && accountRecord.refreshToken;
+      const hasValidProvider = accountRecord.providerId;
+      return hasValidTokens && hasValidProvider;
+    });
+
+    return validAccountsList;
+  },
 );

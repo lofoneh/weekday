@@ -42,9 +42,9 @@ export function ManageAccountsDialog({
   const [accountToDelete, setAccountToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const { data: accounts, isLoading } = api.account.list.useQuery();
-  const { data: defaultAccount } = api.account.getDefault.useQuery();
-  const deleteAccountMutation = api.account.delete.useMutation();
+  const { data: accounts, isLoading } = api.account.fetchAll.useQuery();
+  const { data: defaultAccount } = api.account.retrievePrimary.useQuery();
+  const deleteAccountMutation = api.account.remove.useMutation();
   const utils = api.useUtils();
 
   const handleDeleteAccount = async () => {
@@ -55,8 +55,8 @@ export function ManageAccountsDialog({
       await deleteAccountMutation.mutateAsync({ accountId: accountToDelete });
       toast.success("Account unlinked successfully");
       await Promise.all([
-        utils.account.list.refetch(),
-        utils.account.getDefault.refetch(),
+        utils.account.fetchAll.refetch(),
+        utils.account.retrievePrimary.refetch(),
         utils.calendar.getAllAccountsCalendars.refetch(),
         utils.calendar.getCalendars.invalidate(),
         utils.calendar.getEvents.invalidate(),

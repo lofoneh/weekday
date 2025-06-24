@@ -52,13 +52,13 @@ export function AccountCalendarSection({
   const { isCalendarVisible, toggleCalendarVisibility } = useCalendarContext();
   const [isExpanded, setIsExpanded] = React.useState(true);
 
-  const setDefaultAccount = api.account.setDefault.useMutation({
+  const setDefaultAccount = api.account.updatePrimary.useMutation({
     onError: (error: any) => {
       toast.error("Failed to switch account: " + error.message);
     },
     onSuccess: () => {
-      utils.account.list.invalidate();
-      utils.account.getDefault.invalidate();
+      utils.account.fetchAll.invalidate();
+      utils.account.retrievePrimary.invalidate();
       utils.calendar.getCalendars.invalidate();
       utils.calendar.getAllAccountsCalendars.invalidate();
       utils.calendar.getEvents.invalidate();

@@ -39,23 +39,26 @@ export function NavUser({ session }: { session: Session }) {
   const utils = api.useUtils();
   const [manageAccountsOpen, setManageAccountsOpen] = useState(false);
 
-  const { data: accounts } = api.account.list.useQuery(undefined, {
+  const { data: accounts } = api.account.fetchAll.useQuery(undefined, {
     gcTime: 1000 * 60 * 60 * 24,
     refetchOnWindowFocus: false,
     staleTime: 1000 * 60 * 15,
   });
-  const { data: defaultAccount } = api.account.getDefault.useQuery(undefined, {
-    gcTime: 1000 * 60 * 60 * 24,
-    refetchOnWindowFocus: false,
-    staleTime: 1000 * 60 * 5,
-  });
-  const setDefaultAccount = api.account.setDefault.useMutation({
+  const { data: defaultAccount } = api.account.retrievePrimary.useQuery(
+    undefined,
+    {
+      gcTime: 1000 * 60 * 60 * 24,
+      refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 5,
+    },
+  );
+  const setDefaultAccount = api.account.updatePrimary.useMutation({
     onError: (error) => {
       toast.error("Failed to switch account: " + error.message);
     },
     onSuccess: () => {
-      utils.account.list.invalidate();
-      utils.account.getDefault.invalidate();
+      utils.account.fetchAll.invalidate();
+      utils.account.retrievePrimary.invalidate();
       utils.calendar.getCalendars.invalidate();
       utils.calendar.getEvents.invalidate();
       router.refresh();
@@ -92,8 +95,8 @@ export function NavUser({ session }: { session: Session }) {
       toast.success(
         `${provider.charAt(0).toUpperCase() + provider.slice(1)} account added successfully`,
       );
-      utils.account.list.invalidate();
-      utils.account.getDefault.invalidate();
+      utils.account.fetchAll.invalidate();
+      utils.account.retrievePrimary.invalidate();
     } catch (error) {
       console.error("Failed to add account:", error);
       toast.error("Failed to add account");

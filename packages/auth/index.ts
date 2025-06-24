@@ -29,7 +29,7 @@ const betterAuth = betterAuthClient({
             } catch (error) {
               console.error(
                 `❌ Failed to remove problematic account ${account.id}:`,
-                error
+                error,
               );
             }
             return;
@@ -37,7 +37,7 @@ const betterAuth = betterAuthClient({
 
           if (account.accessToken && account.refreshToken) {
             const provider = ctx?.context.socialProviders.find(
-              (p) => p.id === account.providerId
+              (p) => p.id === account.providerId,
             );
 
             if (provider) {
@@ -88,7 +88,7 @@ const betterAuth = betterAuthClient({
               (!existingAccount.name || !existingAccount.email)
             ) {
               const provider = ctx?.context.socialProviders.find(
-                (p) => p.id === account.providerId
+                (p) => p.id === account.providerId,
               );
 
               if (provider) {
